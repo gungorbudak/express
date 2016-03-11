@@ -1,5 +1,8 @@
 'use strict';
 
+// base URL to the root with trailing slash
+var baseUrl = 'http://localhost/express/';
+
 var drawBrowser = function(tissue, query) {
 
 };
@@ -10,7 +13,7 @@ var drawHeatmap = function(tissue, query) {
     var spinner = new Spinner().spin(target);
 
     var request = [
-        'http://localhost/express/api.php',
+        baseUrl, 'api.php',
         '?tissue=', tissue, '&query=', query
     ].join('');
 
@@ -44,12 +47,16 @@ var drawHeatmap = function(tissue, query) {
         var margin = { top: 100, right: 0, bottom: 0, left: 200 },
             width = containterSize.width - margin.left - margin.right,
             height = (60 * (transcripts.length + 1)) - margin.top - margin.bottom,
-            gridSize = {
-                width: Math.floor(width / stages.length),
-                height: Math.floor(height / transcripts.length)
-            },
             colors = ["#f7fbff","#deebf7","#c6dbef","#9ecae1",
                 "#6baed6","#4292c6","#2171b5","#08519c","#08306b"];
+
+        // fix the shortest height 60
+        height = Math.max(height, 60);
+
+        var cardSize = {
+            width: Math.floor(width / stages.length),
+            height: Math.floor(height / transcripts.length)
+        };
 
         var container = d3.select("#view");
 
@@ -71,9 +78,10 @@ var drawHeatmap = function(tissue, query) {
             .data(stages)
             .enter().append("text")
               .text(function(d) { return d; })
-              .attr("x", function(d, i) { return i * gridSize.width; })
+              .attr("x", function(d, i) { return i * cardSize.width; })
               .attr("y", 0)
-              .attr("transform", "translate(" + gridSize.width / 2 + ", -16)")
+              .attr("transform", "translate(" + cardSize.width / 2 + ", -16)")
+              .style("font-family", "sans-serif")
               .style("text-anchor", "middle")
               .style("fill", "#101010");
 
@@ -82,8 +90,9 @@ var drawHeatmap = function(tissue, query) {
             .enter().append("text")
               .text(function (d) { return d; })
               .attr("x", 0)
-              .attr("y", function (d, i) { return i * gridSize.height; })
-              .attr("transform", "translate(-24," + gridSize.height / 1.65 + ")")
+              .attr("y", function (d, i) { return i * cardSize.height; })
+              .attr("transform", "translate(-24," + cardSize.height / 1.65 + ")")
+              .style("font-family", "sans-serif")
               .style("text-anchor", "end")
               .style("fill", "#101010");
 
@@ -92,11 +101,11 @@ var drawHeatmap = function(tissue, query) {
             .range(colors);
 
         var xScale = function(stage) {
-            return (stageNum[stage] - 1) * gridSize.width;
+            return (stageNum[stage] - 1) * cardSize.width;
         };
 
         var yScale = function(transcript) {
-            return (transcriptNum[transcript] - 1) * gridSize.height;
+            return (transcriptNum[transcript] - 1) * cardSize.height;
         };
 
         var cards = heatmap.selectAll(".card")
@@ -110,17 +119,18 @@ var drawHeatmap = function(tissue, query) {
             .attr("y", function(d) { return yScale(d.transcript); })
             .attr("rx", 4)
             .attr("ry", 4)
-            .attr("width", gridSize.width)
-            .attr("height", gridSize.height)
+            .attr("width", cardSize.width)
+            .attr("height", cardSize.height)
             .style("stroke", "#E6E6E6")
             .style("stroke-width", "1px")
             .style("fill", function(d) { return colorScale(d.value); });
 
         cards.append("text")
             .text(function(d) { return d.value.toFixed(2); })
-            .attr("x", function(d) { return xScale(d.stage) + (gridSize.width / 2) - 12; })
-            .attr("y", function(d) { return yScale(d.transcript) + (gridSize.height / 2) + 5; })
-            .style("fill", function(d) { return (d.value > 0.5) ? "#FFFFFF": "#000000"; });
+            .attr("x", function(d) { return xScale(d.stage) + (cardSize.width / 2) - 12; })
+            .attr("y", function(d) { return yScale(d.transcript) + (cardSize.height / 2) + 5; })
+            .style("font-family", "sans-serif")
+            .style("fill", function(d) { return (d.value >= 0.44) ? "#FFFFFF": "#000000"; });
 
         cards.exit().remove();
 
@@ -152,7 +162,8 @@ var drawHeatmap = function(tissue, query) {
             .text(function(d) { return "≥ " + d.toFixed(2); })
             .attr("x", function(d, i) { return ( (legendSize.width / 2) - 18) + (legendSize.width * i); })
             .attr("y", -65)
-            .style("fill", function(d, i) { return (i > 4) ? "#FFFFFF": "#000000"; });
+            .style("font-family", "sans-serif")
+            .style("fill", function(d, i) { return (i > 3) ? "#FFFFFF": "#000000"; });
 
         legend.exit().remove();
     });
@@ -172,9 +183,19 @@ var isHeatmap = function() {
     return $('.btn-heatmap').data('state');
 };
 
-var search = function() {
+var getTissue = function() {
     var tissue = $('select[name="tissue"]').val();
+    return tissue;
+};
+
+var getQuery = function() {
     var query = $('input[name="query"]').val();
+    return query;
+}
+
+var search = function() {
+    var tissue = getTissue();
+    var query = getQuery();
     if (tissue != '' && query != '') {
         if (isBrowser()) {
             drawBrowser(tissue, query);
@@ -186,17 +207,42 @@ var search = function() {
 };
 
 var exportView = function(format) {
-    if (isHeatmap) {
-        if (format == 'SVG') {
+    if (isHeatmap()) {
+        if (format == 'svg') {
+            var download = [
+                tissue,
+                query.replace(':', '-'),
+                'view.svg'
+            ].join('_');
             var svg = $('#view').html().trim();
             if (svg.length > 0) {
                 var a = document.createElement('a');
                 var data = new Blob([svg], {type: 'image/svg+xml'});
                 a.href = window.URL.createObjectURL(data);
-                a.setAttribute('download', 'heatmap.svg');
+                a.setAttribute('download', download);
                 a.dispatchEvent(clickEvent);
                 a.remove();
             }
+        } else if (format == 'tsv') {
+            var tissue = getTissue();
+            var query = getQuery();
+            var request = [
+                baseUrl, 'api.php',
+                '?tissue=', tissue, '&query=', query, '&format=', format
+            ].join('');
+            $.get(request, function(tsv) {
+                var download = [
+                    tissue,
+                    query.replace(':', '-'),
+                    'view.tsv'
+                ].join('_');
+                var a = document.createElement('a');
+                var data = new Blob([tsv], {type: 'text/tsv'});
+                a.href = window.URL.createObjectURL(data);
+                a.setAttribute('download', download);
+                a.dispatchEvent(clickEvent);
+                a.remove();
+            });
         }
     } else {
 

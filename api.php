@@ -99,6 +99,7 @@
     }
 
     function normalize_row($results) {
+        // find the maximum values for each transcript or row
         $max_vals = array();
         foreach ($results as $result) {
             if (array_key_exists($result['transcript'], $max_vals)) {
@@ -111,6 +112,9 @@
         }
         $normalized = array();
         foreach ($results as $result) {
+            // keep raw value in valueRaw key
+            $result['valueRaw'] = floatval($result['value']);
+            // normalize the value in value key
             if ($max_vals[$result['transcript']] > 0) {
                 $result['value'] = floatval($result['value']) / $max_vals[$result['transcript']];
             } else {
@@ -123,6 +127,7 @@
 
     $query = (isset($_GET['query']) === true && empty($_GET['query']) === false) ? sanitize($_GET['query']) :'';
     $tissue = (isset($_GET['tissue']) === true && empty($_GET['tissue']) === false) ? sanitize($_GET['tissue']) :'';
+    $format = (isset($_GET['format']) === true && empty($_GET['format']) === false) ? sanitize($_GET['format']) :'json';
 
     if ($query !== '' && $tissue !== '') {
         // try connecting to the database
@@ -140,9 +145,29 @@
         $results = query_database($parsed, $tissue, $db);
         // normalize results
         $results = normalize_row($results);
-        // return the JSON format of the data
-        header('Content-Type: application/json');
-        echo json_encode($results);
+        if ($format == 'json') {
+            // return the JSON format of the data
+            header('Content-Type: application/json');
+            echo json_encode($results);
+        } else if ($format == 'tsv') {
+            //header('Content-type: text/tab-separated-values');
+            echo implode("\t", array(
+                'transcript_id',
+                'developmental_stage',
+                'raw_value',
+                'normalized_value'
+            ));
+            echo "\n";
+            foreach ($results as $result) {
+                echo implode("\t", array(
+                    $result['transcript'],
+                    $result['stage'],
+                    $result['valueRaw'],
+                    $result['value']
+                ));
+                echo "\n";
+            }
+        }
         die();
     } else {
         header('Content-Type: application/json');
