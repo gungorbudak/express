@@ -7,6 +7,10 @@
     margin: 10px 0px 20px 0px;
 }
 
+.navbar-brand {
+    color: #2C3E50 !important;
+}
+
 .footer {
     color: #FFFFFF;
     background-color: #101010;
