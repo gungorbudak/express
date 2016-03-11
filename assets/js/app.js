@@ -1,3 +1,5 @@
+'use strict';
+
 var drawBrowser = function(tissue, query) {
 
 };
@@ -47,9 +49,7 @@ var drawHeatmap = function(tissue, query) {
                 height: Math.floor(height / transcripts.length)
             },
             colors = ["#f7fbff","#deebf7","#c6dbef","#9ecae1",
-                "#6baed6","#4292c6","#2171b5","#08519c","#08306b"],
-            colorsGreys = ["#000000","#000000","#000000","#000000",
-                "#000000","#FFFFFF","#FFFFFF","#FFFFFF","#FFFFFF"];
+                "#6baed6","#4292c6","#2171b5","#08519c","#08306b"];
 
         var container = d3.select("#view");
 
@@ -83,7 +83,7 @@ var drawHeatmap = function(tissue, query) {
               .text(function (d) { return d; })
               .attr("x", 0)
               .attr("y", function (d, i) { return i * gridSize.height; })
-              .attr("transform", "translate(-24," + gridSize.height / 1.5 + ")")
+              .attr("transform", "translate(-24," + gridSize.height / 1.65 + ")")
               .style("text-anchor", "end")
               .style("fill", "#101010");
 
@@ -91,13 +91,23 @@ var drawHeatmap = function(tissue, query) {
             .domain([0, d3.max(data, function (d) { return d.value; })])
             .range(colors);
 
-        var cards = heatmap.selectAll(".stage")
+        var xScale = function(stage) {
+            return (stageNum[stage] - 1) * gridSize.width;
+        };
+
+        var yScale = function(transcript) {
+            return (transcriptNum[transcript] - 1) * gridSize.height;
+        };
+
+        var cards = heatmap.selectAll(".card")
             .data(data, function(d) { return transcriptNum[d.transcript] + ':' + stageNum[d.stage]; });
 
-        cards.enter().append("rect")
-            .attr("class", "stage")
-            .attr("x", function(d) { return (stageNum[d.stage] - 1) * gridSize.width; })
-            .attr("y", function(d) { return (transcriptNum[d.transcript] - 1) * gridSize.height; })
+        cards.enter().append("g")
+            .attr("class", "card");
+
+        cards.append("rect")
+            .attr("x", function(d) { return xScale(d.stage); })
+            .attr("y", function(d) { return yScale(d.transcript); })
             .attr("rx", 4)
             .attr("ry", 4)
             .attr("width", gridSize.width)
@@ -106,13 +116,17 @@ var drawHeatmap = function(tissue, query) {
             .style("stroke-width", "1px")
             .style("fill", function(d) { return colorScale(d.value); });
 
-        cards.text(function(d) { return d.value; });
+        cards.append("text")
+            .text(function(d) { return d.value.toFixed(2); })
+            .attr("x", function(d) { return xScale(d.stage) + (gridSize.width / 2) - 12; })
+            .attr("y", function(d) { return yScale(d.transcript) + (gridSize.height / 2) + 5; })
+            .style("fill", function(d) { return (d.value > 0.5) ? "#FFFFFF": "#000000"; });
 
         cards.exit().remove();
 
         var quantiles = [0].concat(colorScale.quantiles());
 
-        legendSize = {
+        var legendSize = {
             width: Math.floor(width / quantiles.length),
             height: 20
         };
@@ -135,10 +149,10 @@ var drawHeatmap = function(tissue, query) {
             .style("fill", function(d, i) { return colors[i]; });
 
         legend.append("text")
-            .text(function(d) { return "≥ " + Math.round(d); })
-            .attr("x", function(d, i) { return (legendSize.width / 2) + (legendSize.width * i); })
+            .text(function(d) { return "≥ " + d.toFixed(2); })
+            .attr("x", function(d, i) { return ( (legendSize.width / 2) - 18) + (legendSize.width * i); })
             .attr("y", -65)
-            .style("fill", function(d, i) { return colorsGreys[i]; });
+            .style("fill", function(d, i) { return (i > 4) ? "#FFFFFF": "#000000"; });
 
         legend.exit().remove();
     });
