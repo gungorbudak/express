@@ -1,0 +1,16 @@
+.header {
+    color: #FFFFFF;
+    background-color: #2C3E50;
+}
+
+.site-description {
+    margin: 10px 0px 20px 0px;
+}
+
+.footer {
+    color: #FFFFFF;
+    background-color: #101010;
+    margin-top: 40px;
+    padding: 50px 0px;
+    box-shadow: 0px 500px 0px 500px #101010;
+}

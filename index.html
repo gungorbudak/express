@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="A database of transcriptome expression profiling in different eye tissues across multiple developmental stages from curated public mouse RNA-seq datasets">
+    <meta name="author" content="Gungor Budak">
+    <title>Express</title>
+    <link rel="stylesheet" href="assets/css/libs/bootstrap.min.css" charset="utf-8">
+    <link rel="stylesheet" href="assets/css/libs/bootstrap-theme.min.css" charset="utf-8">
+    <link rel="stylesheet" href="assets/css/libs/font-awesome.min.css" charset="utf-8">
+    <link rel="stylesheet" href="assets/css/app.css" charset="utf-8">
+</head>
+
+<body>
+    <div class="header">
+        <div class="container">
+            <h1>Express</h1>
+            <p class="site-description">
+                A database of transcriptome expression profiling in different eye tissues across multiple developmental stages from curated public mouse RNA-seq datasets
+            </p>
+        </div>
+    </div>
+
+    <nav class="navbar navbar-default navbar-static-top">
+        <div class="container">
+            <div class="navbar-header">
+                <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
+                    <span class="sr-only">Toggle navigation</span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                </button>
+            </div>
+            <div id="navbar" class="navbar-collapse collapse">
+                <ul class="nav navbar-nav">
+                    <li class="active"><a href="index.html" title="Go to home page"><i class="fa fa-home"></i> Home</a></li>
+                    <li><a href="docs.html" title="Go to documentation page"><i class="fa fa-book"></i> Docs</a></li>
+                    <li><a href="contact.html" title="Go to contact page"><i class="fa fa-envelope"></i> Contact</a></li>
+                </ul>
+                <ul class="nav navbar-nav navbar-right">
+                    <li class="active"><a href="#" class="btn-heatmap" title="Switch to heatmap view" data-state="true"><i class="fa fa-th"></i><span class="hidden-sm hidden-md"> Heatmap view</a></span></li>
+                    <li><a href="#" class="btn-browser" title="Switch to browser view" data-state="false"><i class="fa fa-bars"></i><span class="hidden-sm hidden-md"> Browser view</a></span></li>
+                    <li><a href="#" class="btn-export" title="Export the current view as SVG" data-format="SVG"><i class="fa fa-picture-o"></i><span class="hidden-sm hidden-md"> Export as SVG</a></span></li>
+                    <li><a href="#" class="btn-export" title="Export the current view as TSV" data-format="TSV"><i class="fa fa-table"></i><span class="hidden-sm hidden-md"> Export as TSV</a></span></li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- page content -->
+    <div class="container">
+        <div class="row">
+            <div class="col-sm-4">
+                <label>Tissue type</label>
+                <select name="tissue" class="form-control input-lg">
+                    <option value="lens">Lens</option>
+                    <option value="retina" selected="selected">Retina</option>
+                </select>
+            </div>
+            <div class="col-sm-8">
+                <label>Gene / transcript / location</label>
+                <div class="input-group input-group-lg">
+                    <input type="text" name="query" class="form-control" value="" placeholder="Search for a gene, transcript or location">
+                    <span class="input-group-btn">
+                        <button class="btn btn-default" type="button" name="search" title="Search for a gene, transcript or location">
+                            <span class="glyphicon glyphicon-search"></span>
+                        </button>
+                    </span>
+                </div>
+                <p class="help-block">Sample queries: FMR1, ENSMUST00000088546, 10:60300000-60303299</p>
+            </div>
+        </div>
+        <hr>
+    </div>
+    <!-- /page content -->
+
+    <div class="container">
+        <div id="view">
+            <p>Search for a gene, transcript or location to view associated transcription profiles as heatmap.</p>
+        </div>
+    </div>
+
+    <div class="footer">
+        <div class="container">
+            <p>
+                Express. A database of transcriptome expression profiling in different eye tissues across multiple developmental stages from curated public mouse RNA-seq datasets
+            </p>
+        </div>
+    </div>
+
+    <script src="assets/js/libs/jquery-2.0.3.min.js" charset="utf-8"></script>
+    <script src="assets/js/libs/bootstrap.min.js" charset="utf-8"></script>
+    <script src="assets/js/libs/d3.min.js" charset="utf-8"></script>
+    <script src="assets/js/libs/spin.min.js" charset="utf-8"></script>
+    <script src="assets/js/app.js" charset="utf-8"></script>
+</body>
+
+</html>
