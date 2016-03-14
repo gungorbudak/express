@@ -1,10 +1,10 @@
 # Express
 
-A database of transcriptome expression profiling in different eye tissues across multiple developmental stages from curated public mouse RNA-seq datasets
+A database of transcriptome profiles encompassing known and novel transcripts across multiple developmental stages in eye tissues in mouse
 
 ## Production server
 
-Express in running on http://www.iupui.edu/~sysbio/express/.
+Express will be running on http://www.iupui.edu/~sysbio/express/ soon.
 
 ## Requires
 
@@ -21,4 +21,5 @@ Express in running on http://www.iupui.edu/~sysbio/express/.
 * Make sure you have an Apache server that can run PHP scripts and PHP SQLite drives to connect to the database.
 * Clone the project into your `www` or `public_html` folder in your web server.
 * Download the SQLite database into `express/` directory.
+* Download the GENCODE M7 annotation resources SQLite database into `express/` directory.
 * Visit `http://localhost/express/`.
