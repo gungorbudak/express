@@ -359,7 +359,7 @@ var exportView = function(format) {
                     var name = [
                         tissue,
                         query.replace(':', '-'),
-                        'view.tsv'
+                        'heatmap_view.tsv'
                     ].join('_');
                     saveData(tsv, 'text/tsv', name);
                     spinner.stop();
