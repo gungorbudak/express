@@ -18,3 +18,32 @@
     padding: 50px 0px;
     box-shadow: 0px 500px 0px 500px #101010;
 }
+
+/*Dalliance specific styles*/
+
+*.dalliance .guideline {
+    width: 3px !important;
+    top: 8px !important;
+    opacity: 0.4;
+}
+
+*.dalliance .single-base-guideline {
+    border: none !important;
+}
+
+*.dalliance .tier-tab.active {
+    border: 1px solid #ccc !important;
+}
+
+*:focus.dalliance .tier-tab.active {
+    border: 1px solid #ccc !important;
+}
+
+*.dalliance .track-label .fa-times {
+    display: none !important;
+    visibility: hidden !important;
+}
+
+*.dalliance .track-name-holder {
+    margin-left: 3px !important;
+}

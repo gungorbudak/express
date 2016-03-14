@@ -20,7 +20,7 @@
             'is_location' => false,
             'query' => strtoupper($query)
         );
-        if (preg_match('/^(.*):(.*)-(.*)$/', $query, $match)) {
+        if (preg_match('/^(.*):(.*)-(.*)$/i', $query, $match)) {
             $parsed['is_location'] = true;
             $parsed['query'] = array(
                 'chr_name' => $match[1],
@@ -31,7 +31,7 @@
         return $parsed;
     }
 
-    function query_database($parsed, $tissue_type, $db) {
+    function get_expression($parsed, $tissue_type, $db) {
         $results = array();
         if ($parsed['is_location'] === true) {
             // if a location is given
@@ -125,11 +125,38 @@
         return $normalized;
     }
 
+    function get_location($query, $db) {
+        // if any of the following is given
+        // transcript ID
+        // gene ID
+        // MGI ID
+        // gene name
+        // gene alias
+        $stmt = $db->prepare('SELECT
+            gene.chr_name,
+            gene.start,
+            gene.end
+            FROM gene
+            INNER JOIN transcript
+            ON gene.gene_id = transcript.gene_id
+            WHERE transcript.transcript_id = :query
+            OR gene.gene_id = :query
+            OR gene.gene_name = :query
+            OR gene.gene_alias = :query
+            OR gene.mgi_gene_id = :query
+            GROUP BY gene.gene_id');
+        $stmt->execute(array(
+            ':query' => $query
+        ));
+        $location = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        return $location[0];
+    }
+
     $query = (isset($_GET['query']) === true && empty($_GET['query']) === false) ? sanitize($_GET['query']) :'';
     $tissue = (isset($_GET['tissue']) === true && empty($_GET['tissue']) === false) ? sanitize($_GET['tissue']) :'';
     $format = (isset($_GET['format']) === true && empty($_GET['format']) === false) ? sanitize($_GET['format']) :'json';
 
-    if ($query !== '' && $tissue !== '') {
+    if ($query !== '' || $tissue !== '') {
         // try connecting to the database
         try {
             $db = new PDO('sqlite:test.sqlite');
@@ -139,16 +166,24 @@
             echo json_encode(array('error' => 'DB operation failed with the following error: ' . $e->getMessage()));
             die();
         }
+        // if location is asked
+        if ($format == 'location') {
+            $location = get_location($query, $db);
+            header('Content-Type: application/json');
+            echo json_encode($location);
+            die();
+        }
         // parsing query for identifying location search
         $parsed = parse_query($query);
         // query the database and obtain required fields
-        $results = query_database($parsed, $tissue, $db);
+        $results = get_expression($parsed, $tissue, $db);
         // normalize results
         $results = normalize_row($results);
         if ($format == 'json') {
             // return the JSON format of the data
             header('Content-Type: application/json');
             echo json_encode($results);
+            die();
         } else if ($format == 'tsv') {
             //header('Content-type: text/tab-separated-values');
             echo implode("\t", array(
@@ -167,11 +202,11 @@
                 ));
                 echo "\n";
             }
+            die();
         }
-        die();
     } else {
         header('Content-Type: application/json');
-        echo json_encode(array('error' => 'Missing query and/or tissue parameter!'));
+        echo json_encode(array('error' => 'Missing query or tissue parameter!'));
         die();
     }
 

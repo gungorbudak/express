@@ -5,7 +5,7 @@
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="description" content="A database of transcriptome expression profiling in different eye tissues across multiple developmental stages from curated public mouse RNA-seq datasets">
+    <meta name="description" content="A database of transcriptome profiles encompassing known and novel transcripts across multiple developmental stages in eye tissues in mouse">
     <meta name="author" content="Gungor Budak">
     <title>Express</title>
     <link rel="stylesheet" href="assets/css/libs/bootstrap.min.css" charset="utf-8">
@@ -19,7 +19,7 @@
         <div class="container">
             <h1>Express</h1>
             <p class="site-description">
-                A database of transcriptome expression profiling in different eye tissues across multiple developmental stages from curated public mouse RNA-seq datasets
+                A database of transcriptome profiles encompassing known and novel transcripts across multiple developmental stages in eye tissues in mouse
             </p>
         </div>
     </div>
@@ -42,10 +42,10 @@
                     <li><a href="contact.html" title="Go to contact page"><i class="fa fa-envelope"></i> Contact</a></li>
                 </ul>
                 <ul class="nav navbar-nav navbar-right">
-                    <li class="active"><a href="#" class="btn-heatmap" title="Switch to heatmap view" data-state="true"><i class="fa fa-th"></i><span class="hidden-sm hidden-md"> Heatmap</a></span></li>
-                    <li><a href="#" class="btn-browser" title="Switch to browser view" data-state="false"><i class="fa fa-bars"></i><span class="hidden-sm hidden-md"> Browser</a></span></li>
-                    <li><a href="#" class="btn-export" title="Export the current view as SVG" data-format="svg"><i class="fa fa-picture-o"></i><span class="hidden-sm hidden-md"> Export SVG</a></span></li>
-                    <li><a href="#" class="btn-export" title="Export the current view as TSV" data-format="tsv"><i class="fa fa-table"></i><span class="hidden-sm hidden-md"> Export TSV</a></span></li>
+                    <li class="active"><a href="#" class="btn-heatmap" title="Toggle heatmap view" data-state="true"><i class="fa fa-th"></i><span class="hidden-sm hidden-md"> Heatmap</a></span></li>
+                    <li><a href="#" class="btn-browser" title="Toggle browser view" data-state="false"><i class="fa fa-bars"></i><span class="hidden-sm hidden-md"> Browser</a></span></li>
+                    <li><a href="#" class="btn-export" title="Export current heatmap view as SVG" data-format="svg"><i class="fa fa-picture-o"></i><span class="hidden-sm hidden-md"> Export SVG</a></span></li>
+                    <li><a href="#" class="btn-export" title="Export current heatmap view as TSV" data-format="tsv"><i class="fa fa-table"></i><span class="hidden-sm hidden-md"> Export TSV</a></span></li>
                 </ul>
             </div>
         </div>
@@ -79,15 +79,15 @@
     <!-- /page content -->
 
     <div class="container">
-        <div id="view">
-            <p>Search for a gene, transcript or location to view associated transcription profiles as heatmap.</p>
-        </div>
+        <div id="div-browser" class="hidden"></div>
+        <hr id="hr-separator" class="hidden">
+        <div id="div-heatmap"></div>
     </div>
 
     <div class="footer">
         <div class="container">
             <p>
-                Express. A database of transcriptome expression profiling in different eye tissues across multiple developmental stages from curated public mouse RNA-seq datasets
+                Express: A database of transcriptome profiles encompassing known and novel transcripts across multiple developmental stages in eye tissues in mouse
             </p>
         </div>
     </div>
@@ -95,6 +95,8 @@
     <script src="assets/js/libs/jquery-2.0.3.min.js" charset="utf-8"></script>
     <script src="assets/js/libs/bootstrap.min.js" charset="utf-8"></script>
     <script src="assets/js/libs/d3.min.js" charset="utf-8"></script>
+    <script src="assets/js/libs/dalliance-compiled.js" charset="utf-8"></script>
+    <script src="assets/js/libs/FileSaver.min.js" charset="utf-8"></script>
     <script src="assets/js/libs/spin.min.js" charset="utf-8"></script>
     <script src="assets/js/app.js" charset="utf-8"></script>
 </body>

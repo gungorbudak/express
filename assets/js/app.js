@@ -2,15 +2,111 @@
 
 // base URL to the root with trailing slash
 var baseUrl = 'http://localhost/express/';
+// a global variable for the browser since
+// it will be generated only once
+var browser = undefined;
+// global spinner target, actually body element
+var target = document.body;
+var spinner = new Spinner();
 
-var drawBrowser = function(tissue, query) {
+var getLocation = function(query, callback) {
+    var parsed = query.trim().match(/^(.*):(.*)-(.*)$/i),
+        location = {};
 
+    if (parsed !== null) {
+        // directly return parsed location
+        location = {
+            chr_name: parsed[1].trim(),
+            start: parseInt(parsed[2]),
+            end: parseInt(parsed[3])
+        };
+        callback(location);
+    } else {
+        // make a request to get location using identifier
+        var request = [
+            baseUrl, 'api.php',
+            '?query=', query, '&format=location'
+        ].join('');
+
+        $.get(request, function(data) {
+            location = {
+                chr_name: data['chr_name'].trim(),
+                start: parseInt(data['start']),
+                end: parseInt(data['end'])
+            };
+            callback(location);
+        });
+    }
+};
+
+var drawBrowser = function(query) {
+
+    var sources = [{
+        name: 'Genome',
+        // twoBitURI: baseUrl + 'resources/mm10.2bit',
+        twoBitURI: 'http://www.biodalliance.org/datasets/GRCm38/mm10.2bit',
+        desc: 'Mouse reference genome build GRCm38',
+        tier_type: 'sequence',
+        provides_entrypoints: true,
+        pinned: true,
+    }, {
+        name: 'Genes',
+        desc: 'Mouse gene structures GENCODE version M7 (GRCm38.p4)',
+        bwgURI: baseUrl + 'resources/gencode.vM7.annotation.bb',
+        stylesheet_uri: baseUrl + 'resources/gencode.xml',
+        collapseSuperGroups: true,
+        trixURI: baseUrl + 'resources/gencode.vM7.annotation.ix',
+        noSourceFeatureInfo: true,
+        provides_search: true
+    }];
+
+    // returns the location as a callback
+    getLocation(query, function(location) {
+
+        browser = new Browser({
+            // default view at the beginning
+            chr: location['chr_name'].trim(),
+            viewStart: location['start'],
+            viewEnd: location['end'],
+            cookieKey: 'mouse',
+            // define mouse coordinate system
+            coordSystem: {
+                speciesName: 'Mouse',
+                taxon: 10090,
+                auth: 'GRCm',
+                version: 38,
+                ucscName: 'mm10'
+            },
+            // reference genome and reference transcripts (exons/introns)
+            sources: sources,
+            // additional options for customizing the browser
+            pageName: 'div-browser',
+            uiPrefix: '//www.biodalliance.org/release-0.13/',
+            maxHeight: 250,
+            fullScreen: false,
+            setDocumentTitle: false,
+            disablePoweredBy: true,
+            noLeapButtons: true,
+            noLocationField: true,
+            noZoomSlider: true,
+            noTitle: true,
+            noTrackAdder: true,
+            noTrackEditor: true,
+            noExport: true,
+            noOptions: true,
+            noHelp: true,
+            noClearHighlightsButton: true,
+            noPersist: true,
+            noPersistView: true,
+            noDefaultLabels: false,
+            disableDefaultFeaturePopup: true
+        });
+    });
 };
 
 var drawHeatmap = function(tissue, query) {
 
-    var target = document.body;
-    var spinner = new Spinner().spin(target);
+    spinner.spin(target);
 
     var request = [
         baseUrl, 'api.php',
@@ -20,6 +116,7 @@ var drawHeatmap = function(tissue, query) {
     d3.json(request, function(data) {
 
         spinner.stop();
+
         var stageNum = {}, stageCounter = 0,
             transcriptNum = {}, transcriptCounter = 0;
 
@@ -42,7 +139,7 @@ var drawHeatmap = function(tissue, query) {
             return sofar.indexOf(cur.transcript) < 0 ? sofar.concat([cur.transcript]) : sofar;
         }, []);
 
-        var containterSize = document.getElementById('view').getBoundingClientRect();
+        var containterSize = document.getElementById('div-heatmap').getBoundingClientRect();
 
         var margin = { top: 100, right: 0, bottom: 0, left: 200 },
             width = containterSize.width - margin.left - margin.right,
@@ -58,7 +155,7 @@ var drawHeatmap = function(tissue, query) {
             height: Math.floor(height / transcripts.length)
         };
 
-        var container = d3.select("#view");
+        var container = d3.select("#div-heatmap");
 
         container.selectAll("*").remove();
 
@@ -169,12 +266,6 @@ var drawHeatmap = function(tissue, query) {
     });
 };
 
-var clickEvent = new MouseEvent('click', {
-    'view': window,
-    'bubbles': true,
-    'cancelable': false
-});
-
 var isBrowser = function() {
     return $('.btn-browser').data('state');
 };
@@ -191,14 +282,39 @@ var getTissue = function() {
 var getQuery = function() {
     var query = $('input[name="query"]').val();
     return query;
-}
+};
+
+var searchOnBrowser = function(query) {
+    // returns location as a callback function
+    getLocation(query, function(location) {
+
+        var q = [
+            location['chr_name'], ':',
+            location['start'], '..',
+            location['end']
+        ].join('');
+
+        if (browser !== undefined) {
+            browser.search(q, function(err) {
+                if (err === undefined) {
+                    browser.clearHighlights();
+                } else {
+                    console.log(err);
+                }
+            });
+        }
+    });
+};
 
 var search = function() {
     var tissue = getTissue();
     var query = getQuery();
     if (tissue != '' && query != '') {
-        if (isBrowser()) {
-            drawBrowser(tissue, query);
+        if (browser === undefined) {
+            drawBrowser(query);
+        } else {
+            // browser has been initiated, just search
+            searchOnBrowser(query);
         }
         if (isHeatmap()) {
             drawHeatmap(tissue, query);
@@ -206,60 +322,89 @@ var search = function() {
     }
 };
 
+var saveData = function(data, type, name) {
+    var blob = new Blob([data], {type: type});
+    // using FileSaver.js
+    saveAs(blob, name);
+    return;
+};
+
 var exportView = function(format) {
-    if (isHeatmap()) {
-        if (format == 'svg') {
-            var download = [
-                tissue,
-                query.replace(':', '-'),
-                'view.svg'
-            ].join('_');
-            var svg = $('#view').html().trim();
-            if (svg.length > 0) {
-                var a = document.createElement('a');
-                var data = new Blob([svg], {type: 'image/svg+xml'});
-                a.href = window.URL.createObjectURL(data);
-                a.setAttribute('download', download);
-                a.dispatchEvent(clickEvent);
-                a.remove();
-            }
-        } else if (format == 'tsv') {
-            var tissue = getTissue();
-            var query = getQuery();
-            var request = [
-                baseUrl, 'api.php',
-                '?tissue=', tissue, '&query=', query, '&format=', format
-            ].join('');
-            $.get(request, function(tsv) {
-                var download = [
+    var tissue = getTissue();
+    var query = getQuery();
+
+    if (tissue.length > 0 && query.length > 0) {
+        if (isHeatmap()) {
+
+            var data = '';
+            spinner.spin(target);
+            if (format == 'svg') {
+                var name = [
                     tissue,
                     query.replace(':', '-'),
-                    'view.tsv'
+                    'heatmap_view.svg'
                 ].join('_');
-                var a = document.createElement('a');
-                var data = new Blob([tsv], {type: 'text/tsv'});
-                a.href = window.URL.createObjectURL(data);
-                a.setAttribute('download', download);
-                a.dispatchEvent(clickEvent);
-                a.remove();
-            });
-        }
-    } else {
+                data = $('#div-heatmap').html().trim();
+                saveData(data, 'image/svg+xml', name);
+                spinner.stop();
 
+            } else if (format == 'tsv') {
+
+                var request = [
+                    baseUrl, 'api.php',
+                    '?tissue=', tissue, '&query=', query,
+                    '&format=', format
+                ].join('');
+                $.get(request, function(tsv) {
+                    var name = [
+                        tissue,
+                        query.replace(':', '-'),
+                        'view.tsv'
+                    ].join('_');
+                    saveData(tsv, 'text/tsv', name);
+                    spinner.stop();
+
+                });
+            }
+        }
     }
 };
 
-var toggleView = function($view) {
-    $view.data('state', !$view.data('state'));
-    $view.parent().toggleClass('active');
+var toggleSeparator = function() {
+    var $hrSeparator = $('#hr-separator'),
+        tissue = getTissue(),
+        query = getQuery(),
+        btnBrowserState = $('.btn-browser').data('state'),
+        btnHeatmapState = $('.btn-heatmap').data('state');
+
+    if (btnBrowserState && btnHeatmapState &&
+        tissue.length > 0 && query.length > 0) {
+        $hrSeparator.removeClass('hidden');
+    } else {
+        $hrSeparator.addClass('hidden');
+    }
+};
+
+var toggleView = function($btn) {
+    var $div = $('#div-' + $btn.get(0).className.split('-')[1]);
+
+    $btn.data('state', !$btn.data('state'));
+    $btn.parent().toggleClass('active');
+    if ($btn.data('state')) {
+        $div.removeClass('hidden');
+    } else {
+        $div.addClass('hidden');
+    }
+
+    toggleSeparator();
 };
 
 $(document).ready(function() {
-     $('button[name="search"]').on('click', function(e) {
+    $('button[name="search"]').on('click', function(e) {
         e.preventDefault();
         search();
-     });
-     $('input[name="query"]').on('keypress', function (e) {
+    });
+    $('input[name="query"]').on('keypress', function (e) {
         if (e.which === 13) {
             search();
         }
@@ -269,11 +414,7 @@ $(document).ready(function() {
         var format = $(this).data('format');
         exportView(format);
     });
-    $('.btn-heatmap').on('click', function(e) {
-        e.preventDefault();
-        toggleView($(this));
-    });
-    $('.btn-browser').on('click', function(e) {
+    $('.btn-heatmap, .btn-browser').on('click', function(e) {
         e.preventDefault();
         toggleView($(this));
     });
