@@ -23,5 +23,5 @@ Express will be running on http://www.iupui.edu/~sysbio/express/ soon.
 * Make sure you have an Apache server that can run PHP scripts and PHP SQLite drivers to connect to the database.
 * Clone the project into your `www` or `public_html` folder in your web server.
 * Download the SQLite database into `express/` directory.
-* Download the mouse genome .2bit file and GENCODE M7 annotations SQLite database into `express/resources` directory.
+* Download the mouse genome .2bit file and GENCODE M7 annotations SQLite database into `express/resources/` directory.
 * Visit `http://localhost/express/`.
