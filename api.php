@@ -146,7 +146,7 @@
             OR gene.mgi_gene_id = :query
             GROUP BY gene.gene_id');
         $stmt->execute(array(
-            ':query' => $query
+            ':query' => strtoupper($query)
         ));
         $location = $stmt->fetchAll(PDO::FETCH_ASSOC);
         return $location[0];
@@ -185,22 +185,26 @@
             echo json_encode($results);
             die();
         } else if ($format == 'tsv') {
-            //header('Content-type: text/tab-separated-values');
-            echo implode("\t", array(
-                'transcript_id',
-                'developmental_stage',
-                'raw_value',
-                'normalized_value'
-            ));
-            echo "\n";
-            foreach ($results as $result) {
+            // header('Content-type: text/tab-separated-values');
+            if (count($results) > 0) {
                 echo implode("\t", array(
-                    $result['transcript'],
-                    $result['stage'],
-                    $result['valueRaw'],
-                    $result['value']
+                    'transcript_id',
+                    'developmental_stage',
+                    'raw_value',
+                    'normalized_value'
                 ));
                 echo "\n";
+                foreach ($results as $result) {
+                    echo implode("\t", array(
+                        $result['transcript'],
+                        $result['stage'],
+                        $result['valueRaw'],
+                        $result['value']
+                    ));
+                    echo "\n";
+                }
+            } else {
+                echo '';
             }
             die();
         }

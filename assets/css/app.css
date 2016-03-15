@@ -22,13 +22,15 @@
 /*Dalliance specific styles*/
 
 *.dalliance .guideline {
-    width: 3px !important;
-    top: 8px !important;
-    opacity: 0.4;
+    display: none !important;
 }
 
 *.dalliance .single-base-guideline {
     border: none !important;
+    background-color: blue !important;
+    width: 3px !important;
+    top: 7px !important;
+    opacity: 0.4;
 }
 
 *.dalliance .tier-tab.active {
@@ -46,4 +48,8 @@
 
 *.dalliance .track-name-holder {
     margin-left: 3px !important;
+}
+
+*.dalliance .btn-toolbar {
+    margin: 0px auto !important;
 }
