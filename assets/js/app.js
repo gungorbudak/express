@@ -1,7 +1,7 @@
 'use strict';
 
 // base URL to the root with trailing slash
-var baseUrl = 'http://localhost/express/';
+var baseUrl = 'http://www.iupui.edu/~sysbio/express/';
 // a global variable for the browser since
 // it will be generated only once
 var browser = undefined;
@@ -24,7 +24,7 @@ var getLocation = function(query, callback) {
     } else {
         // make a request to get location using identifier
         var request = [
-            baseUrl, 'api.php',
+            baseUrl, 'app/api.php',
             '?query=', query, '&format=location'
         ].join('');
 
@@ -37,7 +37,7 @@ var getLocation = function(query, callback) {
                 };
             } else {
                 // alert user
-                alertUser('We couldn\'t find what you were looking for in our database.');
+                alertUser('There is no expression profiles for your search.');
             }
             callback(location);
         });
@@ -56,7 +56,7 @@ var drawBrowser = function(query) {
     }, {
         name: 'Genes',
         desc: 'Mouse gene structures GENCODE version M7 (GRCm38.p4)',
-        bwgURI: baseUrl + 'resources/gencode.vM7.annotation.bb',
+        bwgURI: baseUrl + 'resources/gencode.vM7.annotation.custom.bb',
         stylesheet_uri: baseUrl + 'resources/gencode.xml',
         collapseSuperGroups: false,
         trixURI: baseUrl + 'resources/gencode.vM7.annotation.ix',
@@ -93,7 +93,7 @@ var drawBrowser = function(query) {
                 setDocumentTitle: false,
                 disablePoweredBy: true,
                 noLeapButtons: true,
-                noLocationField: true,
+                noLocationField: false,
                 // noZoomSlider: true,
                 noTitle: true,
                 noTrackAdder: true,
@@ -117,11 +117,14 @@ var drawHeatmap = function(tissue, query) {
     spinner.spin(target);
 
     var request = [
-        baseUrl, 'api.php',
+        baseUrl, 'app/api.php',
         '?tissue=', tissue, '&query=', query
     ].join('');
 
     d3.json(request, function(data) {
+
+        var container = d3.select("#div-heatmap");
+
         // data available?
         if (data.length > 0) {
             var stageNum = {}, stageCounter = 0,
@@ -165,8 +168,6 @@ var drawHeatmap = function(tissue, query) {
                 width: Math.floor(width / stages.length),
                 height: Math.floor(height / transcripts.length)
             };
-
-            var container = d3.select("#div-heatmap");
 
             container.selectAll("*").remove();
 
@@ -278,6 +279,8 @@ var drawHeatmap = function(tissue, query) {
                 .style("fill", function(d, i) { return (i > 3) ? "#FFFFFF": "#000000"; });
 
             legend.exit().remove();
+        } else {
+            container.selectAll("*").remove();
         }
         spinner.stop();
     });
@@ -405,7 +408,7 @@ var exportView = function(format) {
             } else if (format == 'tsv') {
 
                 var request = [
-                    baseUrl, 'api.php',
+                    baseUrl, 'app/api.php',
                     '?tissue=', tissue, '&query=', query,
                     '&format=', format
                 ].join('');

@@ -5,6 +5,59 @@
     */
 
     /*
+    MySQL table create queries
+
+    CREATE TABLE gene (
+        gene_alias CHAR(25) NOT NULL,
+        gene_name CHAR(25) NOT NULL,
+        gene_id CHAR(25) NOT NULL,
+        mgi_gene_id CHAR(25),
+        chr_name CHAR(5) NOT NULL,
+        start INT(11) NOT NULL,
+        end INT(11) NOT NULL,
+        strand CHAR(1) NOT NULL,
+        PRIMARY KEY (gene_alias, gene_id),
+        INDEX name (gene_alias, gene_name, gene_id, mgi_gene_id)
+    );
+
+    CREATE TABLE transcript (
+        transcript_id CHAR(25) NOT NULL,
+        gene_id CHAR(25) NOT NULL,
+        PRIMARY KEY (transcript_id, gene_id)
+    );
+
+    CREATE TABLE expression (
+        transcript_id CHAR(25) NOT NULL,
+        sample_id CHAR(25) NOT NULL,
+        dev_stage CHAR(5) NOT NULL,
+        tissue_type CHAR(25) NOT NULL,
+        chr_name CHAR(5) NOT NULL,
+        start INT(11) NOT NULL,
+        end INT(11) NOT NULL,
+        strand CHAR(1) NOT NULL,
+        tpm DOUBLE PRECISION NOT NULL,
+        PRIMARY KEY (transcript_id, sample_id, dev_stage, tissue_type),
+        INDEX name (transcript_id, sample_id, dev_stage, tissue_type, chr_name, start, end)
+    );
+
+    */
+
+    require_once 'config.php';
+    // this PHP file has an array like following
+    // kept separate for security reasons
+    /*
+    <?php
+        $config = array(
+            'host' => 'host',
+            'port' => port,
+            'dbname' => 'dbname',
+            'user' => 'user',
+            'pass' => 'pass'
+        );
+    ?>
+    */
+
+    /*
     Sanitizing user input
     */
     function sanitize($query) {
@@ -12,16 +65,39 @@
     }
 
     /*
+    Searching strings starting with $needle
+    Adapted from http://stackoverflow.com/a/10473026
+    */
+    function startsWith($haystack, $needle) {
+        $haystack = strtolower($haystack);
+        $needle = strtolower($needle);
+        // search backwards starting from haystack length characters from the end
+        return $needle === "" || strrpos($haystack, $needle, -strlen($haystack)) !== false;
+    }
+
+    /*
     Parsing query and identfying if the search is using location
     or any other identifier like gene name, transcript ID
     */
     function parse_query($query) {
+        // setting type of the query
+        if (startsWith($query, 'ENSMUSG')) {
+            $type = 'gene_id';
+        } elseif (startsWith($query, 'MGI:')) {
+            $type = 'mgi_gene_id';
+        } elseif (startsWith($query, 'ENSMUST')) {
+            $type = 'transcript_id';
+        } else {
+            $type = 'gene_alias';
+        }
         $parsed = array(
             'is_location' => false,
+            'type' => $type,
             'query' => strtoupper($query)
         );
         if (preg_match('/^(.*):(.*)-(.*)$/i', $query, $match)) {
             $parsed['is_location'] = true;
+            $parsed['type'] = 'location';
             $parsed['query'] = array(
                 'chr_name' => $match[1],
                 'start' => intval($match[2]),
@@ -57,19 +133,36 @@
             // transcript ID
             // gene ID
             // MGI ID
-            // gene name
-            // gene alias
-            $stmt = $db->prepare('SELECT
-                transcript.transcript_id
-                FROM gene
-                INNER JOIN transcript
-                ON gene.gene_id = transcript.gene_id
-                WHERE transcript.transcript_id = :query
-                OR gene.gene_id = :query
-                OR gene.gene_name = :query
-                OR gene.gene_alias = :query
-                OR gene.mgi_gene_id = :query
-                GROUP BY transcript.transcript_id');
+            // gene alias (same as gene name)
+            if ($parsed['type'] == 'gene_id') {
+                $stmt = $db->prepare("SELECT
+                    transcript.transcript_id
+                    FROM gene, transcript
+                    WHERE gene.gene_id = transcript.gene_id
+                    AND gene.gene_id = :query
+                    GROUP BY transcript.transcript_id");
+            } elseif ($parsed['type'] == 'mgi_gene_id') {
+                $stmt = $db->prepare("SELECT
+                    transcript.transcript_id
+                    FROM gene, transcript
+                    WHERE gene.gene_id = transcript.gene_id
+                    AND gene.mgi_gene_id = :query
+                    GROUP BY transcript.transcript_id");
+            } elseif ($parsed['type'] == 'transcript_id') {
+                $stmt = $db->prepare("SELECT
+                    transcript.transcript_id
+                    FROM gene, transcript
+                    WHERE gene.gene_id = transcript.gene_id
+                    AND transcript.transcript_id = :query
+                    GROUP BY transcript.transcript_id");
+            } else {
+                $stmt = $db->prepare("SELECT
+                    transcript.transcript_id
+                    FROM gene, transcript
+                    WHERE gene.gene_id = transcript.gene_id
+                    AND gene.gene_alias = :query
+                    GROUP BY transcript.transcript_id");
+            }
             $stmt->execute(array(
                 ':query' => $parsed['query']
             ));
@@ -132,19 +225,18 @@
         // MGI ID
         // gene name
         // gene alias
-        $stmt = $db->prepare('SELECT
+        $stmt = $db->prepare("SELECT
             gene.chr_name,
             gene.start,
             gene.end
-            FROM gene
-            INNER JOIN transcript
-            ON gene.gene_id = transcript.gene_id
-            WHERE transcript.transcript_id = :query
+            FROM gene, transcript
+            WHERE gene.gene_id = transcript.gene_id
+            AND (transcript.transcript_id = :query
             OR gene.gene_id = :query
             OR gene.gene_name = :query
             OR gene.gene_alias = :query
-            OR gene.mgi_gene_id = :query
-            GROUP BY gene.gene_id');
+            OR gene.mgi_gene_id = :query)
+            GROUP BY gene.gene_id");
         $stmt->execute(array(
             ':query' => strtoupper($query)
         ));
@@ -159,7 +251,11 @@
     if ($query !== '' || $tissue !== '') {
         // try connecting to the database
         try {
-            $db = new PDO('sqlite:test.sqlite');
+            // $db = new PDO('sqlite:test.sqlite');
+            $db = new PDO(
+                'mysql:host='. $config['host']
+                .';port='. $config['port']
+                .';dbname='. $config['dbname'], $config['user'], $config['pass']);
             $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
         } catch (PDOException $e) {
             header('Content-Type: application/json');
