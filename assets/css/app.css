@@ -19,6 +19,14 @@
     box-shadow: 0px 500px 0px 500px #101010;
 }
 
+.list-relaxed li {
+  padding: 0px 0px 20px;
+}
+
+ol, ul {
+  padding-left: 28px;
+}
+
 /*Dalliance specific styles*/
 
 *.dalliance .guideline {

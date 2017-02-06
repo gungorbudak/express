@@ -24,6 +24,7 @@
         </div>
     </div>
 
+    <!-- navigation -->
     <nav class="navbar navbar-default navbar-static-top">
         <div class="container">
             <div class="navbar-header">
@@ -44,12 +45,18 @@
                 <ul class="nav navbar-nav navbar-right">
                     <li class="active"><a href="#" class="btn-heatmap" title="Toggle heatmap view" data-state="true"><i class="fa fa-th"></i><span class="hidden-sm hidden-md"> Heatmap</a></span></li>
                     <li><a href="#" class="btn-browser" title="Toggle browser view" data-state="false"><i class="fa fa-bars"></i><span class="hidden-sm hidden-md"> Browser</a></span></li>
-                    <li><a href="#" class="btn-export" title="Export current heatmap view as SVG" data-format="svg"><i class="fa fa-picture-o"></i><span class="hidden-sm hidden-md"> Export SVG</a></span></li>
-                    <li><a href="#" class="btn-export" title="Export current heatmap view as TSV" data-format="tsv"><i class="fa fa-table"></i><span class="hidden-sm hidden-md"> Export TSV</a></span></li>
+                    <li class="dropdown">
+                      <a href="#" class="dropdown-toggle" title="Export views and data" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false"><i class="fa fa-share-square-o" aria-hidden="true"></i><span class="hidden-sm hidden-md"> Export </span><span class="caret"></span></a>
+                      <ul class="dropdown-menu">
+                        <li><a href="#" class="btn-export" title="Export current heatmap view as SVG" data-view="heatmap" data-format="svg"><i class="fa fa-picture-o"></i> Heatmap view (SVG)</a></li>
+                        <li><a href="#" class="btn-export" title="Export current heatmap data as TSV" data-view="heatmap" data-format="tsv"><i class="fa fa-table"></i> Heatmap data (TSV)</a></li>
+                        <li><a href="#" class="btn-export" title="Export current browser view as SVG" data-view="browser" data-format="svg"><i class="fa fa-picture-o"></i> Browser view (SVG)</a></li>
+                      </ul>
+                    </li>
                 </ul>
             </div>
         </div>
-    </nav>
+    </nav><!-- /navigation -->
 
     <!-- page content -->
     <div class="container">
@@ -57,8 +64,8 @@
             <div class="col-sm-4">
                 <label>Tissue type</label>
                 <select name="tissue" class="form-control input-lg">
-                    <option value="lens">Lens</option>
-                    <option value="retina" selected="selected">Retina</option>
+                    <option value="lens" selected="selected">Lens</option>
+                    <option value="retina">Retina</option>
                 </select>
             </div>
             <div class="col-sm-8">
@@ -75,18 +82,23 @@
             </div>
         </div>
         <hr>
-    </div>
-    <!-- /page content -->
-
-    <div class="container">
-        <div id="div-warnings"></div>
-    </div>
-
-    <div class="container">
-        <div id="div-browser" class="hidden"></div>
+        <!-- container for warnings -->
+        <div id="div-warnings">
+        </div>
+        <!-- container for browser view -->
+        <div id="div-browser" class="hidden">
+        </div>
         <hr id="hr-separator" class="hidden">
-        <div id="div-heatmap"></div>
-    </div>
+        <!-- container for heatmap view -->
+        <div id="div-heatmap">
+        </div>
+        <p class="text-justify">
+          Express contains transcript level expression data obtained from 21 lens and 35 retina RNA-Seq mouse samples. We downloaded the raw datasets, aligned them to reference genome and quantified transcript level expression for known and novel transcripts. When then downloaded the reference gene and transcript information and organized them along with the expression data in a MySQL database. We finally developed a PHP backend to interact with the database and a frontend to interact with the user and to visualize the query results.
+        </p>
+        <p class="text-center">
+          <a href="docs.html" class="btn btn-primary">Read more about Express on Docs &raquo;</a>
+        </p>
+    </div></div><!-- /page content -->
 
     <div class="footer">
         <div class="container">

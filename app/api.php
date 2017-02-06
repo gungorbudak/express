@@ -68,7 +68,7 @@
     Searching strings starting with $needle
     Adapted from http://stackoverflow.com/a/10473026
     */
-    function startsWith($haystack, $needle) {
+    function starts_with($haystack, $needle) {
         $haystack = strtolower($haystack);
         $needle = strtolower($needle);
         // search backwards starting from haystack length characters from the end
@@ -81,11 +81,11 @@
     */
     function parse_query($query) {
         // setting type of the query
-        if (startsWith($query, 'ENSMUSG')) {
+        if (starts_with($query, 'ENSMUSG')) {
             $type = 'gene_id';
-        } elseif (startsWith($query, 'MGI:')) {
+        } elseif (starts_with($query, 'MGI:')) {
             $type = 'mgi_gene_id';
-        } elseif (startsWith($query, 'ENSMUST')) {
+        } elseif (starts_with($query, 'ENSMUST')) {
             $type = 'transcript_id';
         } else {
             $type = 'gene_alias';
@@ -111,16 +111,17 @@
         $results = array();
         if ($parsed['is_location'] === true) {
             // if a location is given
-            $stmt = $db->prepare('SELECT
+            $stmt = $db->prepare("SELECT
                 transcript_id AS transcript,
                 dev_stage AS stage,
-                AVG(tpm) AS value
+                AVG(tpm) AS value,
+                CONCAT(chr_name, ':', start, '-', end) AS location
                 FROM expression
                 WHERE tissue_type = :tissue_type
                 AND chr_name = :chr_name
                 AND start < :end
                 AND end > :start
-                GROUP BY dev_stage, transcript_id');
+                GROUP BY dev_stage, transcript_id");
             $stmt->execute(array(
                 ':tissue_type' => $tissue_type,
                 ':chr_name' => $parsed['query']['chr_name'],
@@ -175,7 +176,8 @@
             $stmt = $db->prepare("SELECT
                 transcript_id AS transcript,
                 dev_stage AS stage,
-                AVG(tpm) AS value
+                AVG(tpm) AS value,
+                CONCAT(chr_name, ':', start, '-', end) AS location
                 FROM expression
                 WHERE tissue_type = ?
                 AND transcript_id IN ($in)
@@ -218,27 +220,46 @@
         return $normalized;
     }
 
-    function get_location($query, $db) {
+    function get_location($parsed, $db) {
         // if any of the following is given
         // transcript ID
         // gene ID
         // MGI ID
         // gene name
         // gene alias
-        $stmt = $db->prepare("SELECT
-            gene.chr_name,
-            gene.start,
-            gene.end
-            FROM gene, transcript
-            WHERE gene.gene_id = transcript.gene_id
-            AND (transcript.transcript_id = :query
-            OR gene.gene_id = :query
-            OR gene.gene_name = :query
-            OR gene.gene_alias = :query
-            OR gene.mgi_gene_id = :query)
-            GROUP BY gene.gene_id");
+        if ($parsed['type'] == 'gene_id') {
+            $stmt = $db->prepare("SELECT
+                gene.chr_name,
+                gene.start,
+                gene.end
+                FROM gene
+                WHERE gene.gene_id = :query");
+        } elseif ($parsed['type'] == 'mgi_gene_id') {
+            $stmt = $db->prepare("SELECT
+                gene.chr_name,
+                gene.start,
+                gene.end
+                FROM gene
+                WHERE gene.mgi_gene_id = :query");
+        } elseif ($parsed['type'] == 'transcript_id') {
+            $stmt = $db->prepare("SELECT
+                gene.chr_name,
+                gene.start,
+                gene.end
+                FROM gene, transcript
+                WHERE gene.gene_id = transcript.gene_id
+                AND transcript.transcript_id = :query
+                GROUP BY transcript.transcript_id");
+        } else {
+            $stmt = $db->prepare("SELECT
+                gene.chr_name,
+                gene.start,
+                gene.end
+                FROM gene
+                WHERE gene.gene_alias = :query");
+        }
         $stmt->execute(array(
-            ':query' => strtoupper($query)
+            ':query' => strtoupper($parsed['query'])
         ));
         $location = $stmt->fetchAll(PDO::FETCH_ASSOC);
         return $location[0];
@@ -248,7 +269,8 @@
     $tissue = (isset($_GET['tissue']) === true && empty($_GET['tissue']) === false) ? sanitize($_GET['tissue']) :'';
     $format = (isset($_GET['format']) === true && empty($_GET['format']) === false) ? sanitize($_GET['format']) :'json';
 
-    if ($query !== '' || $tissue !== '') {
+    if ($query !== '') {
+
         // try connecting to the database
         try {
             // $db = new PDO('sqlite:test.sqlite');
@@ -262,52 +284,60 @@
             echo json_encode(array('error' => 'DB operation failed with the following error: ' . $e->getMessage()));
             die();
         }
+
         // if location is asked
         if ($format == 'location') {
-            $location = get_location($query, $db);
+            $parsed = parse_query($query);
+            $location = get_location($parsed, $db);
             header('Content-Type: application/json');
             echo json_encode($location);
             die();
         }
-        // parsing query for identifying location search
-        $parsed = parse_query($query);
-        // query the database and obtain required fields
-        $results = get_expression($parsed, $tissue, $db);
-        // normalize results
-        $results = normalize_row($results);
-        if ($format == 'json') {
-            // return the JSON format of the data
-            header('Content-Type: application/json');
-            echo json_encode($results);
-            die();
-        } else if ($format == 'tsv') {
-            // header('Content-type: text/tab-separated-values');
-            if (count($results) > 0) {
-                echo implode("\t", array(
-                    'transcript_id',
-                    'developmental_stage',
-                    'raw_value',
-                    'normalized_value'
-                ));
-                echo "\n";
-                foreach ($results as $result) {
+
+        // if getting expression data
+        if ($tissue !== '') {
+            // parsing query for identifying location search
+            $parsed = parse_query($query);
+            // query the database and obtain required fields
+            $results = get_expression($parsed, $tissue, $db);
+            // normalize results
+            $results = normalize_row($results);
+            if ($format == 'json') {
+                // return the JSON format of the data
+                header('Content-Type: application/json');
+                echo json_encode($results);
+                die();
+            } else if ($format == 'tsv') {
+                if (count($results) > 0) {
+                    // write the header
                     echo implode("\t", array(
-                        $result['transcript'],
-                        $result['stage'],
-                        $result['valueRaw'],
-                        $result['value']
+                        'transcript_id',
+                        'developmental_stage',
+                        'raw_value',
+                        'normalized_value'
                     ));
                     echo "\n";
+                    // write the rows
+                    foreach ($results as $result) {
+                        echo implode("\t", array(
+                            $result['transcript'],
+                            $result['stage'],
+                            $result['valueRaw'],
+                            $result['value']
+                        ));
+                        echo "\n";
+                    }
+                } else {
+                    echo '';
                 }
-            } else {
-                echo '';
-            }
-            die();
-        }
-    } else {
-        header('Content-Type: application/json');
-        echo json_encode(array('error' => 'Missing query or tissue parameter!'));
-        die();
-    }
+                die();
+            } // id $format == ...
+        } // if $tissue !== ''
+    } // if $query !== ''
+
+    // if above conditions not satisfied
+    header('Content-Type: application/json');
+    echo json_encode(array('error' => 'Missing query or tissue parameter!'));
+    die();
 
 ?>

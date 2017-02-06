@@ -1,4 +1,162 @@
-<h2>Docs</h2>
-<p>
-    Express is a database of transcriptome expression profiling in different eye tissues across multiple developmental stages from curated public mouse RNA-seq datasets.
-</p>
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="A database of transcriptome profiles encompassing known and novel transcripts across multiple developmental stages in eye tissues in mouse">
+    <meta name="author" content="Gungor Budak">
+    <title>Documentation &ndash; Express</title>
+    <link rel="stylesheet" href="assets/css/libs/bootstrap.min.css" charset="utf-8">
+    <link rel="stylesheet" href="assets/css/libs/bootstrap-theme.min.css" charset="utf-8">
+    <link rel="stylesheet" href="assets/css/libs/font-awesome.min.css" charset="utf-8">
+    <link rel="stylesheet" href="assets/css/app.css" charset="utf-8">
+</head>
+
+<body>
+    <div class="header hidden-xs">
+        <div class="container">
+            <h1>Express</h1>
+            <p class="site-description">
+                A database of transcriptome profiles encompassing known and novel transcripts across multiple developmental stages in eye tissues in mouse
+            </p>
+        </div>
+    </div>
+
+    <!-- navigation -->
+    <nav class="navbar navbar-default navbar-static-top">
+        <div class="container">
+            <div class="navbar-header">
+                <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
+                    <span class="sr-only">Toggle navigation</span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                </button>
+                <a class="navbar-brand navbar-brand-express visible-xs-inline" href="#">Express</a>
+            </div>
+            <div id="navbar" class="navbar-collapse collapse">
+                <ul class="nav navbar-nav">
+                    <li><a href="index.html" title="Go to home page"><i class="fa fa-home"></i> Home</a></li>
+                    <li class="active"><a href="docs.html" title="Go to documentation page"><i class="fa fa-book"></i> Docs</a></li>
+                    <li><a href="contact.html" title="Go to contact page"><i class="fa fa-envelope"></i> Contact</a></li>
+                </ul>
+            </div>
+        </div>
+    </nav><!-- /navigation -->
+
+    <!-- page content -->
+    <div class="container">
+      <h2>Documentation</h2>
+      <hr>
+      <div class="row">
+        <div class="col-md-8">
+
+          <a name="introduction"></a>
+          <h3>Introduction</h3>
+          <p>
+            Express is a database of transcriptome profiles encompassing known and novel transcripts across multiple developmental stages in eye tissues in mouse. Express contains transcript level expression data obtained from 21 lens and 35 retina RNA-Seq mouse samples. We downloaded the raw datasets, aligned them to reference genome and quantified transcript level expression for known and novel transcripts. When then downloaded the reference gene and transcript information and organized them along with the expression data in a MySQL database. We finally developed a PHP backend to interact with the database and a frontend to interact with the user and to visualize the query results.
+          </p>
+
+          <a name="datasets"></a>
+          <h3>Datasets</h3>
+          <p>
+            We downloaded 21 mouse lens and 35 mouse retina samples across different developmental stages varying from E15 to P90. Please see Table 1 and Table 2 in our publication for more details.
+          </p>
+
+          <a name="preprocessing"></a>
+          <h3>Preprocessing</h3>
+          <p>
+            The downloaded raw datasets (in FASTQ format) were aligned to reference mouse genome (mm10) using HISAT. The alignment files (in SAM format) were processed to sorted BAMs later indexing them using SAMtools. The sorted BAM files were then given to StringTie for transcript quantification and discovery along with a reference mouse transcripts obtained from Ensembl. The GTF files storing the expression levels for known and novel transcipts provided by StringTie were then used to generate a reference annotation file including novel transcripts using StringTie "merge" mode. After the reference annotation file with novel transcripts were obtained, we reran StringTie with the sorted BAM files giving the new reference annotation file to collect the final GTF files including expression levels for transcripts including known and novel transcripts. The final GTF files are then organized into an SQL table.
+          </p>
+          <p>
+            We also downloaded gene information from Ensembl BioMart and HGNC for gene alias, gene name, gene ID and transcript ID relationships for all known transcripts. We also downloaded transcript information from Ensembl including gene ID and transcript ID. These two tables are then converted into SQL tables and together with the expression data, they were put in a MySQL database.
+          </p>
+
+          <a name="api"></a>
+          <h3>API</h3>
+          <p>
+            The backend PHP API allows us to query the MySQL database for expression levels of transcripts given a tissue type and a query (e.g. gene symbol, Ensembl, MGI gene ID, Ensembl transcript ID or chromosomal location). The API URL as follows: <code>http://www.iupui.edu/~sysbio/express/app/api.php</code> and accepts two GET parameters, <code>tissue</code> and <code>query</code> (e.g. <a href="http://www.iupui.edu/~sysbio/express/app/api.php?tissue=retina&query=10:60300000-60303299" target="_blank">http://www.iupui.edu/~sysbio/express/app/api.php?tissue=retina&query=10:60300000-60303299</a>).
+          </p>
+          <a name="input"></a>
+          <h4>Input</h4>
+          <p>
+            The <code>tissue</code> parameter can be one of the following:
+          </p>
+          <ul>
+            <li>retina</li>
+            <li>lens</li>
+          </ul>
+          <p>
+            The <code>query</code> parameter can be one of the following:
+          </p>
+          <ul>
+            <li>Gene symbol</li>
+            <li>Ensembl gene ID</li>
+            <li>Ensembl transcript ID</li>
+            <li>MGI gene ID</li>
+            <li>Chromosomal location</li>
+          </ul>
+          <a name="output"></a>
+          <h4>Output</h4>
+          <p>
+            The output will be a JSON array of objects with following properties:
+          </p>
+          <ul>
+            <li>transcript</li>
+            <li>stage</li>
+            <li>value</li>
+            <li>valueRaw</li>
+            <li>location</li>
+          </ul>
+
+          <a name="usage"></a>
+          <h3>Usage</h3>
+          <p>
+            Go to Home page, select a tissue type and enter a query (or pick one of the sample queries), and then click search button. The results will be shown as heatmap by default. The browser view can later be toggled using the button in the right hand side of the navigation. Similarly, you can also toggle the heatmap view. The both views and heatmap data can be exported using the Export button in the right hand side of the navigation. The views will be exported in SVG (scalable vector graphics) format and the data will be exported as TSV (Tab-separated values).
+          </p>
+
+        </div>
+        <div class="col-md-4">
+          <h3>Content</h3>
+          <ul>
+            <li><a href="#introduction">Introduction</a></li>
+            <li><a href="#datasets">Datasets</a></li>
+            <li><a href="#preprocessing">Preprocessing</a></li>
+            <li>
+              <a href="#api">API</a>
+              <ul>
+                <li><a href="#api-input">Input</a></li>
+                <li><a href="#api-output">Output</a></li>
+              </ul>
+            </li>
+            <li><a href="#usage">Usage</a></li>
+          </ul>
+        </div>
+      </div>
+    </div><!-- /page content -->
+
+    <div class="footer">
+        <div class="container">
+            <p>
+                Express: A database of transcriptome profiles encompassing known and novel transcripts across multiple developmental stages in eye tissues in mouse
+            </p>
+        </div>
+    </div>
+
+    <script src="assets/js/libs/jquery-2.0.3.min.js" charset="utf-8"></script>
+    <script src="assets/js/libs/bootstrap.min.js" charset="utf-8"></script>
+    <script>
+      (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+      (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+      m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+      })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+      ga('create', 'UA-48281803-15', 'auto');
+      ga('send', 'pageview');
+
+    </script>
+</body>
+
+</html>

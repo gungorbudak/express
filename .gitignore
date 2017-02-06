@@ -1,4 +1,5 @@
 app/config.php
 tables/*
 resources/*
-test.sqlite
+express.sql.gz
+.DS_Store
