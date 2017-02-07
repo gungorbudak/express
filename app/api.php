@@ -169,22 +169,25 @@
             ));
             // fetch all distinct transcript IDs as single dimensional array
             $transcript_ids = $stmt->fetchAll(PDO::FETCH_COLUMN, 0);
-            $in = join(',', array_pad(array(), count($transcript_ids), '?'));
-            $params = $transcript_ids;
-            array_unshift($params, $tissue_type);
-            // fetch for those transcript IDs TPMs
-            $stmt = $db->prepare("SELECT
-                transcript_id AS transcript,
-                dev_stage AS stage,
-                AVG(tpm) AS value,
-                CONCAT(chr_name, ':', start, '-', end) AS location
-                FROM expression
-                WHERE tissue_type = ?
-                AND transcript_id IN ($in)
-                GROUP BY dev_stage, transcript_id");
-            $stmt->execute($params);
-            // fetch expression values
-            $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $count = count($transcript_ids);
+            if ($count > 0) {
+                $in = join(',', array_pad(array(), $count, '?'));
+                $params = $transcript_ids;
+                array_unshift($params, $tissue_type);
+                // fetch for those transcript IDs TPMs
+                $stmt = $db->prepare("SELECT
+                    transcript_id AS transcript,
+                    dev_stage AS stage,
+                    AVG(tpm) AS value,
+                    CONCAT(chr_name, ':', start, '-', end) AS location
+                    FROM expression
+                    WHERE tissue_type = ?
+                    AND transcript_id IN ($in)
+                    GROUP BY dev_stage, transcript_id");
+                $stmt->execute($params);
+                // fetch expression values
+                $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            }
         }
         // sort the results by developmental stage
         usort($results, function($a, $b) {

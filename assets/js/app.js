@@ -143,7 +143,7 @@ function drawHeatmap(tissue, query) {
         var container = d3.select("#div-heatmap");
 
         // data available?
-        if (data.length > 0) {
+        if (data !== null && data.length > 0) {
             var stageNum = {};
             var stageCounter = 0;
             var transcriptNum = {};
