@@ -10,8 +10,8 @@ var target = document.body;
 var spinner = new Spinner({
   lines: 15,
   length: 0,
-  width: 20,
-  radius: 50
+  width: 12,
+  radius: 32
 });
 
 function getHashValue(key) {
@@ -238,7 +238,12 @@ function drawHeatmap(tissue, query) {
               .attr("transform", "translate(-24," + cardSize.height / 2.25 + ")")
               .style("font-family", "sans-serif")
               .style("text-anchor", "end")
-              .style("fill", "#101010");
+              .style("fill", "#337ab7")
+              .style("text-decoration", "underline")
+              .style("cursor", "pointer")
+              .on("click", function(d) {
+                return window.open("http://www.ensembl.org/id/" + d.split('__')[0]);
+              });
 
             transcriptLabels.select("text.label-transcript-location")
               .text(function (d) { return d.split('__')[1]; })
