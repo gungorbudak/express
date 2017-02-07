@@ -1,5 +1,4 @@
 app/config.php
 tables/*
 resources/*
-express.sql.gz
 .DS_Store
