@@ -21,7 +21,7 @@ After setting up an environment including Apache and MySQL servers, you will nee
 
         perl -pi -e "s/www\.iupui\.edu\/\~sysbio/localhost/g" path/to/www/express/assets/js/app.js
 
-3. A directory called `resources under root directory
+3. A directory called `resources` under root directory
 
         cd /path/to/www/express # actual root of the cloned repository
         mkdir resources
