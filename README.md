@@ -17,9 +17,9 @@ After setting up an environment including Apache and MySQL servers, you will nee
         cd /path/to/www # actual root directory for Apache server
         git clone https://github.com/gungorbudak/express.git
 
-2. A directory called resources under root directory containing
+2. A directory called resources under root directory
 
-        cd /path/to/www/express # the actual root of the cloned repository
+        cd /path/to/www/express # actual root of the cloned repository
         mkdir resources
 
 3. Custom GENCODE vM7 annotation and XML files under resources directory

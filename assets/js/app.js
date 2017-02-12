@@ -8,10 +8,10 @@ var browser = null;
 // global spinner and target, actually body element
 var target = document.body;
 var spinner = new Spinner({
-  lines: 15,
-  length: 0,
-  width: 12,
-  radius: 32
+    lines: 15,
+    length: 0,
+    width: 12,
+    radius: 32
 });
 
 function getHashValue(key) {
@@ -165,16 +165,13 @@ function drawHeatmap(tissue, query) {
             }, []);
 
             var transcripts = data.reduce(function(sofar, cur) {
-                // serialize transcript ID and location
-                cur = cur.transcript + '__' + cur.location;
+                // serialize gene name, transcript ID and location
+                cur = cur.gene + '__' + cur.transcript + '__' + cur.location;
                 return sofar.indexOf(cur) < 0 ? sofar.concat([cur]) : sofar;
             }, []);
 
-            // var containterSize = document.getElementById('div-heatmap').getBoundingClientRect();
-
             var margin = { top: 100, right: 0, bottom: 0, left: 200 };
             var width = 1200 - margin.left - margin.right;
-            // var width = containterSize.width - margin.left - margin.right,
             var height = (60 * (transcripts.length + 1)) - margin.top - margin.bottom;
             var colors = ["#f7fbff","#deebf7","#c6dbef","#9ecae1",
               "#6baed6","#4292c6","#2171b5","#08519c","#08306b"];
@@ -197,8 +194,6 @@ function drawHeatmap(tissue, query) {
                 .attr("height", "100%")
                 .attr("viewBox", "0 0 " + innerWidth + " " + innerHeight)
                 .attr("preserveAspectRatio", "xMinYMid meet");
-                // .attr("width", width + margin.left + margin.right)
-                // .attr("height", height + margin.top + margin.bottom);
 
             svg.append("rect")
                 .attr("width", "100%")
@@ -227,29 +222,53 @@ function drawHeatmap(tissue, query) {
               .append("g")
               .attr("class", "group-transcript");
             transcriptLabelsEnter.append("text")
+              .attr("class", "label-gene-symbol");
+            transcriptLabelsEnter.append("text")
               .attr("class", "label-transcript-id");
             transcriptLabelsEnter.append("text")
               .attr("class", "label-transcript-location");
 
-            transcriptLabels.select("text.label-transcript-id")
-              .text(function (d) { return d.split('__')[0]; })
+            transcriptLabels.select("text.label-gene-symbol")
+              .text(function (d) {
+                return (d.split('__')[1].startsWith('ENS')) ? d.split('__')[0]: "";
+              })
               .attr("x", 0)
               .attr("y", function (d, i) { return i * cardSize.height; })
-              .attr("transform", "translate(-24," + cardSize.height / 2.25 + ")")
+              .attr("transform", "translate(-24," + cardSize.height / 2.85 + ")")
               .style("font-family", "sans-serif")
               .style("text-anchor", "end")
-              .style("fill", "#337ab7")
-              .style("text-decoration", "underline")
-              .style("cursor", "pointer")
-              .on("click", function(d) {
-                return window.open("http://www.ensembl.org/id/" + d.split('__')[0]);
-              });
+              .style("fill", "#101010");
 
-            transcriptLabels.select("text.label-transcript-location")
+            transcriptLabels.select("text.label-transcript-id")
               .text(function (d) { return d.split('__')[1]; })
               .attr("x", 0)
               .attr("y", function (d, i) { return i * cardSize.height; })
-              .attr("transform", "translate(-24," + cardSize.height / 1.45 + ")")
+              .attr("transform", "translate(-24," + cardSize.height / 1.70 + ")")
+              .style("font-family", "sans-serif")
+              .style("text-anchor", "end")
+              .style("fill", function(d) {
+                return (d.split('__')[1].startsWith('ENS')) ? "#337ab7": "#101010";
+              })
+              .style("text-decoration", function(d) {
+                return (d.split('__')[1].startsWith('ENS')) ? "underline": "none";
+              })
+              .style("cursor", function(d) {
+                return (d.split('__')[1].startsWith('ENS')) ? "pointer": "auto";
+              })
+              .on("click", function(d) {
+                var id = d.split('__')[1];
+                if (id.startsWith('ENS')) {
+                  return window.open("http://www.ensembl.org/id/" + id);
+                } else {
+                  return false;
+                }
+              });
+
+            transcriptLabels.select("text.label-transcript-location")
+              .text(function (d) { return d.split('__')[2]; })
+              .attr("x", 0)
+              .attr("y", function (d, i) { return i * cardSize.height; })
+              .attr("transform", "translate(-24," + cardSize.height / 1.15 + ")")
               .style("font-family", "sans-serif")
               .style("text-anchor", "end")
               .style("fill", "#101010");
@@ -272,62 +291,65 @@ function drawHeatmap(tissue, query) {
               });
 
             cards.enter().append("g")
-                .attr("class", "card");
+              .attr("class", "card");
 
             cards.append("rect")
-                .attr("x", function(d) { return xScale(d.stage); })
-                .attr("y", function(d) { return yScale(d.transcript); })
-                .attr("rx", 4)
-                .attr("ry", 4)
-                .attr("width", cardSize.width)
-                .attr("height", cardSize.height)
-                .style("stroke", "#E6E6E6")
-                .style("stroke-width", "1px")
-                .style("fill", function(d) { return colorScale(d.value); });
+              .attr("x", function(d) { return xScale(d.stage); })
+              .attr("y", function(d) { return yScale(d.transcript); })
+              .attr("rx", 4)
+              .attr("ry", 4)
+              .attr("width", cardSize.width)
+              .attr("height", cardSize.height)
+              .style("stroke", "#E6E6E6")
+              .style("stroke-width", "1px")
+              .style("fill", function(d) { return colorScale(d.value); });
 
             cards.append("text")
-                .text(function(d) { return d.value.toFixed(2); })
-                .attr("x", function(d) { return xScale(d.stage) + (cardSize.width / 2) - 12; })
-                .attr("y", function(d) { return yScale(d.transcript) + (cardSize.height / 2) + 5; })
-                .style("font-family", "sans-serif")
-                .style("fill", function(d) { return (d.value >= 0.44) ? "#FFFFFF": "#000000"; });
+              .text(function(d) { return d.value.toFixed(2); })
+              .attr("x", function(d) { return xScale(d.stage) + (cardSize.width / 2) - 12; })
+              .attr("y", function(d) { return yScale(d.transcript) + (cardSize.height / 2) + 5; })
+              .style("font-family", "sans-serif")
+              .style("fill", function(d) { return (d.value >= 0.44) ? "#FFFFFF": "#000000"; });
 
             cards.exit().remove();
 
             var quantiles = [0].concat(colorScale.quantiles());
             var legendSize = {
-                width: Math.floor(width / quantiles.length),
-                height: 20
+              width: Math.floor(width / quantiles.length),
+              height: 20
             };
             var legend = heatmap.selectAll(".legend")
-                .data(quantiles, function(d) { return d; });
+              .data(quantiles, function(d) { return d; });
 
             legend.enter().append("g")
-                .attr("class", "legend");
+              .attr("class", "legend");
 
             legend.append("rect")
-                .attr("x", function(d, i) { return legendSize.width * i; })
-                .attr("y", -80)
-                .attr("rx", 4)
-                .attr("ry", 4)
-                .attr("width", legendSize.width)
-                .attr("height", legendSize.height)
-                .style("stroke", "#E6E6E6")
-                .style("stroke-width", "1px")
-                .style("fill", function(d, i) { return colors[i]; });
+              .attr("x", function(d, i) { return legendSize.width * i; })
+              .attr("y", -80)
+              .attr("rx", 4)
+              .attr("ry", 4)
+              .attr("width", legendSize.width)
+              .attr("height", legendSize.height)
+              .style("stroke", "#E6E6E6")
+              .style("stroke-width", "1px")
+              .style("fill", function(d, i) { return colors[i]; });
 
             legend.append("text")
-                .text(function(d) { return "≥ " + d.toFixed(2); })
-                .attr("x", function(d, i) { return ( (legendSize.width / 2) - 18) + (legendSize.width * i); })
-                .attr("y", -65)
-                .style("font-family", "sans-serif")
-                .style("fill", function(d, i) { return (i > 3) ? "#FFFFFF": "#000000"; });
+              .text(function(d) { return "≥ " + d.toFixed(2); })
+              .attr("x", function(d, i) { return ( (legendSize.width / 2) - 18) + (legendSize.width * i); })
+              .attr("y", -65)
+              .style("font-family", "sans-serif")
+              .style("fill", function(d, i) { return (i > 3) ? "#FFFFFF": "#000000"; });
 
             legend.exit().remove();
-
-            $('#div-heatmap').append($('<hr>'));
         } else {
+            // tell user there is no data
+            alertUser('There is no expression profiles for your search.');
+            // clear the heatmap container
             container.selectAll("*").remove();
+            // hide the heatmap separator
+            $('#hr-separator-heatmap').addClass('hidden');
         }
         spinner.stop();
     });
@@ -556,18 +578,30 @@ function exportView(view, format) {
 }
 
 function toggleSeparator() {
-    var $hrSeparator = $('#hr-separator');
     var tissue = getTissue();
     var query = getQuery();
+    var $hrSeparatorBrowser = $('#hr-separator-browser');
+    var $hrSeparatorHeatmap = $('#hr-separator-heatmap');
     var btnBrowserState = $('.btn-browser').data('state');
     var btnHeatmapState = $('.btn-heatmap').data('state');
 
-    if (btnBrowserState && btnHeatmapState && browser !== null &&
+    // control visibility of browser separator
+    if (browser !== null &&
+        btnBrowserState && btnHeatmapState &&
         tissue.length > 0 && query.length > 0) {
-        $hrSeparator.removeClass('hidden');
+        $hrSeparatorBrowser.removeClass('hidden');
     } else {
-        $hrSeparator.addClass('hidden');
+        $hrSeparatorBrowser.addClass('hidden');
     }
+
+    // control visibility of heatmap separator
+    if ((btnBrowserState || btnHeatmapState) &&
+        tissue.length > 0 && query.length > 0) {
+        $hrSeparatorHeatmap.removeClass('hidden');
+    } else {
+        $hrSeparatorHeatmap.addClass('hidden');
+    }
+
     return;
 };
 

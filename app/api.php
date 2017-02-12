@@ -1,24 +1,13 @@
 <?php
 
     /*
+
     Express API
-    */
+    Author: Gungor Budak, gngrbdk@gmail.com
 
-    /*
-    MySQL table create queries
+    MySQL queries
 
-    CREATE TABLE gene (
-        gene_alias CHAR(25) NOT NULL,
-        gene_name CHAR(25) NOT NULL,
-        gene_id CHAR(25) NOT NULL,
-        mgi_gene_id CHAR(25),
-        chr_name CHAR(5) NOT NULL,
-        start INT(11) NOT NULL,
-        end INT(11) NOT NULL,
-        strand CHAR(1) NOT NULL,
-        PRIMARY KEY (gene_alias, gene_id),
-        INDEX name (gene_alias, gene_name, gene_id, mgi_gene_id)
-    );
+    CREATE DATABASE express;
 
     CREATE TABLE transcript (
         transcript_id CHAR(25) NOT NULL,
@@ -26,7 +15,21 @@
         PRIMARY KEY (transcript_id, gene_id)
     );
 
+    CREATE TABLE gene (
+        gene_alias CHAR(25) NOT NULL,
+        gene_name CHAR(25) NOT NULL,
+        ensembl_gene_id CHAR(25) NOT NULL,
+        mgi_gene_id CHAR(25) NOT NULL,
+        chr_name CHAR(5) NOT NULL,
+        start INT(11) NOT NULL,
+        end INT(11) NOT NULL,
+        strand CHAR(1) NOT NULL,
+        PRIMARY KEY (gene_alias, ensembl_gene_id),
+        INDEX name (gene_alias, gene_name, ensembl_gene_id, mgi_gene_id)
+    );
+
     CREATE TABLE expression (
+        gene_name CHAR(25) NOT NULL,
         transcript_id CHAR(25) NOT NULL,
         sample_id CHAR(25) NOT NULL,
         dev_stage CHAR(5) NOT NULL,
@@ -35,16 +38,22 @@
         start INT(11) NOT NULL,
         end INT(11) NOT NULL,
         strand CHAR(1) NOT NULL,
-        tpm DOUBLE PRECISION NOT NULL,
-        PRIMARY KEY (transcript_id, sample_id, dev_stage, tissue_type),
-        INDEX name (transcript_id, sample_id, dev_stage, tissue_type, chr_name, start, end)
+        tpm_raw DOUBLE PRECISION NOT NULL,
+        tpm_normalized DOUBLE PRECISION NOT NULL,
+        PRIMARY KEY (gene_name, transcript_id, sample_id, dev_stage, tissue_type),
+        INDEX name (gene_name, transcript_id, sample_id, dev_stage, tissue_type, chr_name, start, end)
     );
+
+    mysqlimport --ignore-lines=1 --fields-terminated-by='\t' --lines-terminated-by='\n' --local -u root -p express transcript.tsv
+    mysqlimport --ignore-lines=1 --fields-terminated-by='\t' --lines-terminated-by='\n' --local -u root -p express gene.tsv
+    mysqlimport --ignore-lines=1 --fields-terminated-by='\t' --lines-terminated-by='\n' --local -u root -p express expression.tsv
 
     */
 
-    require_once 'config.php';
+
     // this PHP file has an array like following
     // kept separate for security reasons
+    require_once 'config.php';
     /*
     <?php
         $config = array(
@@ -112,9 +121,11 @@
         if ($parsed['is_location'] === true) {
             // if a location is given
             $stmt = $db->prepare("SELECT
+                gene_name AS gene,
                 transcript_id AS transcript,
                 dev_stage AS stage,
-                AVG(tpm) AS value,
+                AVG(tpm_raw) AS value_raw,
+                AVG(tpm_normalized) AS value_normalized,
                 CONCAT(chr_name, ':', start, '-', end) AS location
                 FROM expression
                 WHERE tissue_type = :tissue_type
@@ -130,37 +141,39 @@
             ));
             $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
         } else {
-            // if any of the following is given
-            // transcript ID
-            // gene ID
-            // MGI ID
-            // gene alias (same as gene name)
+            /*
+            if any of the following is given:
+                gene alias (same as gene name)
+                MGI ID
+                Ensembl gene ID
+                Ensembl transcript ID
+            */
             if ($parsed['type'] == 'gene_id') {
                 $stmt = $db->prepare("SELECT
                     transcript.transcript_id
                     FROM gene, transcript
-                    WHERE gene.gene_id = transcript.gene_id
-                    AND gene.gene_id = :query
+                    WHERE gene.ensembl_gene_id = transcript.gene_id
+                    AND gene.ensembl_gene_id = :query
                     GROUP BY transcript.transcript_id");
             } elseif ($parsed['type'] == 'mgi_gene_id') {
                 $stmt = $db->prepare("SELECT
                     transcript.transcript_id
                     FROM gene, transcript
-                    WHERE gene.gene_id = transcript.gene_id
+                    WHERE gene.ensembl_gene_id = transcript.gene_id
                     AND gene.mgi_gene_id = :query
                     GROUP BY transcript.transcript_id");
             } elseif ($parsed['type'] == 'transcript_id') {
                 $stmt = $db->prepare("SELECT
                     transcript.transcript_id
                     FROM gene, transcript
-                    WHERE gene.gene_id = transcript.gene_id
+                    WHERE gene.ensembl_gene_id = transcript.gene_id
                     AND transcript.transcript_id = :query
                     GROUP BY transcript.transcript_id");
             } else {
                 $stmt = $db->prepare("SELECT
                     transcript.transcript_id
                     FROM gene, transcript
-                    WHERE gene.gene_id = transcript.gene_id
+                    WHERE gene.ensembl_gene_id = transcript.gene_id
                     AND gene.gene_alias = :query
                     GROUP BY transcript.transcript_id");
             }
@@ -176,9 +189,11 @@
                 array_unshift($params, $tissue_type);
                 // fetch for those transcript IDs TPMs
                 $stmt = $db->prepare("SELECT
+                    gene_name AS gene,
                     transcript_id AS transcript,
                     dev_stage AS stage,
-                    AVG(tpm) AS value,
+                    AVG(tpm_raw) AS value_raw,
+                    AVG(tpm_normalized) AS value_normalized,
                     CONCAT(chr_name, ':', start, '-', end) AS location
                     FROM expression
                     WHERE tissue_type = ?
@@ -197,46 +212,45 @@
     }
 
     function normalize_row($results) {
-        // find the maximum values for each transcript or row
+        // find the maximum normalized values for each transcript or row
         $max_vals = array();
         foreach ($results as $result) {
             if (array_key_exists($result['transcript'], $max_vals)) {
-                if ($max_vals[$result['transcript']] < floatval($result['value'])) {
-                    $max_vals[$result['transcript']] = floatval($result['value']);
+                if ($max_vals[$result['transcript']] < floatval($result['value_normalized'])) {
+                    $max_vals[$result['transcript']] = floatval($result['value_normalized']);
                 }
             } else {
-                $max_vals[$result['transcript']] = floatval($result['value']);
+                $max_vals[$result['transcript']] = floatval($result['value_normalized']);
             }
         }
-        $normalized = array();
+        $data = array();
         foreach ($results as $result) {
-            // keep raw value in valueRaw key
-            $result['valueRaw'] = floatval($result['value']);
-            // normalize the value in value key
+            // normalize the value in value_normalized key
             if ($max_vals[$result['transcript']] > 0) {
-                $result['value'] = floatval($result['value']) / $max_vals[$result['transcript']];
+                $result['value'] = floatval($result['value_normalized']) / $max_vals[$result['transcript']];
             } else {
-                $result['value'] = floatval($result['value']);
+                $result['value'] = floatval($result['value_normalized']);
             }
-            $normalized[] = $result;
+            $data[] = $result;
         }
-        return $normalized;
+        return $data;
     }
 
     function get_location($parsed, $db) {
-        // if any of the following is given
-        // transcript ID
-        // gene ID
-        // MGI ID
-        // gene name
-        // gene alias
+        /*
+        if any of the following is given:
+            gene alias (same as gene name)
+            MGI ID
+            Ensembl gene ID
+            Ensembl transcript ID
+        */
         if ($parsed['type'] == 'gene_id') {
             $stmt = $db->prepare("SELECT
                 gene.chr_name,
                 gene.start,
                 gene.end
                 FROM gene
-                WHERE gene.gene_id = :query");
+                WHERE gene.ensembl_gene_id = :query");
         } elseif ($parsed['type'] == 'mgi_gene_id') {
             $stmt = $db->prepare("SELECT
                 gene.chr_name,
@@ -250,7 +264,7 @@
                 gene.start,
                 gene.end
                 FROM gene, transcript
-                WHERE gene.gene_id = transcript.gene_id
+                WHERE gene.ensembl_gene_id = transcript.gene_id
                 AND transcript.transcript_id = :query
                 GROUP BY transcript.transcript_id");
         } else {
@@ -278,9 +292,9 @@
         try {
             // $db = new PDO('sqlite:test.sqlite');
             $db = new PDO(
-                'mysql:host='. $config['host']
-                .';port='. $config['port']
-                .';dbname='. $config['dbname'], $config['user'], $config['pass']);
+                'mysql:host='. $config['host'] .';port='. $config['port'] .';dbname='. $config['dbname'],
+                $config['user'], $config['pass']
+                );
             $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
         } catch (PDOException $e) {
             header('Content-Type: application/json');
@@ -314,6 +328,7 @@
                 if (count($results) > 0) {
                     // write the header
                     echo implode("\t", array(
+                        'gene_name',
                         'transcript_id',
                         'developmental_stage',
                         'raw_value',
@@ -323,10 +338,11 @@
                     // write the rows
                     foreach ($results as $result) {
                         echo implode("\t", array(
+                            $result['gene'],
                             $result['transcript'],
                             $result['stage'],
-                            $result['valueRaw'],
-                            $result['value']
+                            round($result['value_raw'], 2),
+                            round($result['value_normalized'], 2)
                         ));
                         echo "\n";
                     }
