@@ -62,14 +62,23 @@
     <!-- page content -->
     <div class="container">
         <div class="row">
-            <div class="col-sm-4">
+            <div class="col-sm-3">
                 <label>Tissue type</label>
                 <select name="tissue" class="form-control input-lg">
                     <option value="lens" selected="selected">Lens</option>
                     <option value="retina">Retina</option>
                 </select>
             </div>
-            <div class="col-sm-8">
+            <div class="col-sm-3">
+                <label>TPM cutoff</label>
+                <select name="cutoff" class="form-control input-lg">
+                    <option value="0">0</option>
+                    <option value="1" selected="selected">1</option>
+                    <option value="2">2</option>
+                    <option value="5">5</option>
+                </select>
+            </div>
+            <div class="col-sm-6">
                 <label>Gene / transcript / location</label>
                 <div class="input-group input-group-lg">
                     <input type="text" name="query" class="form-control" value="" placeholder="Search for a gene, transcript or location">

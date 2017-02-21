@@ -126,13 +126,14 @@ function drawBrowser(query) {
     });
 }
 
-function drawHeatmap(tissue, query) {
+function drawHeatmap(tissue, cutoff, query) {
 
     spinner.spin(target);
 
     var request = [
         baseUrl, 'app/api.php',
         '?tissue=', tissue,
+        '&cutoff=', cutoff,
         '&query=', query
     ].join('');
 
@@ -382,6 +383,18 @@ function setTissue(tissue) {
 }
 
 /*
+Gets the recently selected TPM cutoff from the form
+*/
+function getCutoff() {
+    var cutoff = $('select[name="cutoff"]').val();
+    return cutoff;
+}
+
+function setCutoff(cutoff) {
+    $('select[name="cutoff"]').val(cutoff);
+}
+
+/*
 Gets the recently entered query from the form
 */
 function getQuery() {
@@ -468,15 +481,16 @@ function searchOnBrowser(query) {
     });
 }
 
-function search(tissue, query) {
+function search(tissue, cutoff, query) {
 
     var parameters = [
       '#tissue=', tissue,
+      '&cutoff=', cutoff,
       '&query=', query
     ].join('');
     window.location.hash = parameters;
 
-    if (tissue != '' && query != '') {
+    if (tissue != '' && cutoff != '' && query != '') {
         if (browser === null) {
             drawBrowser(query);
         } else {
@@ -484,7 +498,7 @@ function search(tissue, query) {
             searchOnBrowser(query);
         }
         if (isHeatmap()) {
-            drawHeatmap(tissue, query);
+            drawHeatmap(tissue, cutoff, query);
         }
     }
 
@@ -505,11 +519,13 @@ function saveData(data, type, name) {
 
 function exportView(view, format) {
   var tissue = getTissue();
+  var cutoff = getCutoff();
   var query = getQuery();
 
-  if (tissue.length > 0 && query.length > 0) {
+  if (tissue.length > 0 && cutoff.length > 0 && query.length > 0) {
     var namePrefix = [
       tissue,
+      cutoff,
       query.replace(':', '-')
     ].join('_');
 
@@ -530,7 +546,9 @@ function exportView(view, format) {
 
           var request = [
             baseUrl, 'app/api.php',
-            '?tissue=', tissue, '&query=', query,
+            '?tissue=', tissue,
+            '&cutoff=', cutoff,
+            '&query=', query,
             '&format=', format
             ].join('');
 
@@ -579,6 +597,7 @@ function exportView(view, format) {
 
 function toggleSeparator() {
     var tissue = getTissue();
+    var cutoff = getCutoff();
     var query = getQuery();
     var $hrSeparatorBrowser = $('#hr-separator-browser');
     var $hrSeparatorHeatmap = $('#hr-separator-heatmap');
@@ -588,7 +607,7 @@ function toggleSeparator() {
     // control visibility of browser separator
     if (browser !== null &&
         btnBrowserState && btnHeatmapState &&
-        tissue.length > 0 && query.length > 0) {
+        tissue.length > 0 && cutoff.length > 0 && query.length > 0) {
         $hrSeparatorBrowser.removeClass('hidden');
     } else {
         $hrSeparatorBrowser.addClass('hidden');
@@ -596,7 +615,7 @@ function toggleSeparator() {
 
     // control visibility of heatmap separator
     if ((btnBrowserState || btnHeatmapState) &&
-        tissue.length > 0 && query.length > 0) {
+        tissue.length > 0 && cutoff.length > 0 && query.length > 0) {
         $hrSeparatorHeatmap.removeClass('hidden');
     } else {
         $hrSeparatorHeatmap.addClass('hidden');
@@ -624,10 +643,12 @@ function toggleView($btn) {
 // event handlers
 $(document).ready(function() {
     var tissue = getHashValue('tissue');
+    var cutoff = getHashValue('cutoff');
     var query = getHashValue('query');
 
-    if (tissue !== null && query !== null) {
+    if (tissue !== null && cutoff !== null && query !== null) {
       setTissue(tissue);
+      setCutoff(cutoff);
       setQuery(query);
       search(tissue, query);
     }
@@ -635,15 +656,17 @@ $(document).ready(function() {
     $('button[name="search"]').on('click', function(e) {
         e.preventDefault();
         var tissue = getTissue();
+        var cutoff = getCutoff();
         var query = getQuery();
-        search(tissue, query);
+        search(tissue, cutoff, query);
     });
 
     $('input[name="query"]').on('keypress', function (e) {
         if (e.which === 13) {
             var tissue = getTissue();
+            var cutoff = getCutoff();
             var query = getQuery();
-            search(tissue, query);
+            search(tissue, cutoff, query);
         }
     });
 
