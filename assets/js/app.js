@@ -50,9 +50,6 @@ function getLocation(query, callback) {
                     start: parseInt(data['start']),
                     end: parseInt(data['end'])
                 };
-            } else {
-                // alert user
-                alertUser('There is no expression profiles for your search.');
             }
             callback(location);
         });
@@ -125,6 +122,53 @@ function drawBrowser(query) {
             });
         }
     });
+}
+
+function drawTable(data) {
+    var $container = $("#div-table");
+    $container.empty();
+
+    if (data !== null && data.length > 0) {
+
+        // TODO: make this unique for stage and bioproject_id
+        var unique_data = data.filter(function(item, pos, array) {
+            return array.map(function(mapItem) {
+                return mapItem['stage'];
+            }).indexOf(item['stage']) === pos;
+        })
+
+        // set up the table and the header
+        var $div = $("<div>", {class: "table-responsive"}).appendTo($container);
+        var $table = $("<table>", {class: "table table-striped"}).appendTo($div);
+        var $thead = $("<thead>").appendTo($table);
+        var $tr = $("<tr>").appendTo($thead);
+        $tr.append($("<th>", {text: "Developmental stage"}));
+        $tr.append($("<th>", {text: "NCBI BioProject ID"}));
+        $tr.append($("<th>", {text: "PubMed reference"}));
+
+        // set up the table body with the data
+        var $tbody = $("<tbody>").appendTo($table);
+
+        unique_data.forEach(function(d) {
+            var $tr = $("<tr>").appendTo($tbody);
+            $tr.append($("<td>", {text: d.stage}));
+            var $td = $("<td>").appendTo($tr);
+            $td.append($("<a>", {
+                href: "https://www.ncbi.nlm.nih.gov/bioproject/" + d.bioproject_id,
+                text: d.bioproject_id,
+                target: "_blank"
+            }));
+            var $td = $("<td>").appendTo($tr);
+            $td.append($("<a>", {
+                href: "https://www.ncbi.nlm.nih.gov/pubmed/" + d.pubmed_id,
+                text: d.reference,
+                target: "_blank"
+            }));
+        });
+    } else {
+        // clear the table container
+        $container.empty();
+    }
 }
 
 function drawHeatmap(tissue, cutoff, query) {
@@ -344,6 +388,7 @@ function drawHeatmap(tissue, cutoff, query) {
               .style("fill", function(d, i) { return (i > 3) ? "#FFFFFF": "#000000"; });
 
             legend.exit().remove();
+
         } else {
             // tell user there is no data
             alertUser('There is no expression profiles for your search.');
@@ -352,6 +397,10 @@ function drawHeatmap(tissue, cutoff, query) {
             // hide the heatmap separator
             $('#hr-separator-heatmap').addClass('hidden');
         }
+
+        // draw the table from obtained data
+        drawTable(data);
+
         spinner.stop();
     });
 }
