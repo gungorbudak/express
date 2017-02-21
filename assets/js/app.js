@@ -40,6 +40,7 @@ function getLocation(query, callback) {
             baseUrl, 'app/api.php',
             '?query=', query, '&format=location'
         ].join('');
+
         console.log(request);
 
         $.get(request, function(data) {
@@ -127,7 +128,6 @@ function drawBrowser(query) {
 }
 
 function drawHeatmap(tissue, cutoff, query) {
-
     spinner.spin(target);
 
     var request = [
@@ -482,7 +482,6 @@ function searchOnBrowser(query) {
 }
 
 function search(tissue, cutoff, query) {
-
     var parameters = [
       '#tissue=', tissue,
       '&cutoff=', cutoff,
@@ -650,7 +649,7 @@ $(document).ready(function() {
       setTissue(tissue);
       setCutoff(cutoff);
       setQuery(query);
-      search(tissue, query);
+      search(tissue, cutoff, query);
     }
 
     $('button[name="search"]').on('click', function(e) {

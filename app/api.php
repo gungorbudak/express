@@ -207,6 +207,9 @@
                 synonym.gene_name AS gene,
                 transcript.ensembl_transcript_id AS transcript,
                 sample.dev_stage AS stage,
+                sample.bioproject_id AS bioproject_id,
+                sample.pubmed_id AS pubmed_id,
+                sample.reference AS reference,
                 AVG(expression.tpm_raw) AS value_raw,
                 AVG(expression.tpm_normalized) AS value_normalized,
                 CONCAT(expression.chr_name, ':', expression.start, '-', expression.end) AS location
@@ -350,6 +353,9 @@
                         'gene_name',
                         'transcript_id',
                         'developmental_stage',
+                        'bioproject_id',
+                        'pubmed_id',
+                        'reference',
                         'raw_value',
                         'normalized_value'
                     ));
@@ -360,6 +366,9 @@
                             $result['gene'],
                             $result['transcript'],
                             $result['stage'],
+                            $result['bioproject_id'],
+                            $result['pubmed_id'],
+                            $result['reference'],
                             round($result['value_raw'], 2),
                             round($result['value_normalized'], 2)
                         ));
