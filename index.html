@@ -34,7 +34,7 @@
                     <span class="icon-bar"></span>
                     <span class="icon-bar"></span>
                 </button>
-                <a class="navbar-brand navbar-brand-express visible-xs-inline" href="#">Express</a>
+                <a class="navbar-brand navbar-brand-express visible-xs-inline" href="index.html">Express</a>
             </div>
             <div id="navbar" class="navbar-collapse collapse">
                 <ul class="nav navbar-nav">
@@ -62,20 +62,27 @@
     <!-- page content -->
     <div class="container">
         <div class="row">
-            <div class="col-sm-3">
+            <div class="col-sm-2">
                 <label>Tissue type</label>
                 <select name="tissue" class="form-control input-lg">
                     <option value="lens" selected="selected">Lens</option>
                     <option value="retina">Retina</option>
                 </select>
             </div>
-            <div class="col-sm-3">
+            <div class="col-sm-2">
                 <label>TPM cutoff</label>
                 <select name="cutoff" class="form-control input-lg">
                     <option value="0">0</option>
                     <option value="1" selected="selected">1</option>
                     <option value="2">2</option>
                     <option value="5">5</option>
+                </select>
+            </div>
+            <div class="col-sm-2">
+                <label>Values</label>
+                <select name="value" class="form-control input-lg">
+                    <option value="normalized">Normalized</option>
+                    <option value="raw" selected="selected">Raw</option>
                 </select>
             </div>
             <div class="col-sm-6">
@@ -88,16 +95,14 @@
                         </button>
                     </span>
                 </div>
-                <p class="help-block">Sample queries: Fmr1, MGI:95564, ENSMUST00000088546, 10:60300000-60303299</p>
+                <p class="help-block">Sample queries: Cryb2, MGI:95564, ENSMUST00000088546, 5:113058250-113072250</p>
             </div>
         </div>
         <hr>
         <!-- container for warnings -->
-        <div id="div-warnings">
-        </div>
+        <div id="div-warnings"></div>
         <!-- container for browser view -->
-        <div id="div-browser" class="hidden">
-        </div>
+        <div id="div-browser" class="hidden"></div>
         <hr id="hr-separator-browser" class="hidden">
         <!-- container for heatmap view -->
         <div id="div-heatmap"></div>
@@ -106,7 +111,7 @@
         <div id="div-table"></div>
 
         <p class="text-justify">
-          Express contains transcript level expression data obtained from 21 lens and 35 retina RNA-Seq mouse samples. We downloaded the raw datasets, aligned them to reference genome and quantified transcript level expression for known and novel transcripts. When then downloaded the reference gene and transcript information and organized them along with the expression data in a MySQL database. We finally developed a PHP backend to interact with the database and a frontend to interact with the user and to visualize the query results.
+          Express contains transcript level expression data obtained from 21 lens and 25 retina RNA-Seq mouse samples. We downloaded the raw datasets, aligned them to reference genome and quantified transcript level expression for known and novel transcripts. We then downloaded the reference gene and transcript information and organized them along with the expression data in a MySQL database. We finally developed a PHP backend to interact with the database and a frontend to interact with the user and to visualize the query results.
         </p>
         <p class="text-center">
           <a href="docs.html" class="btn btn-primary">Read more about Express on Docs &raquo;</a>

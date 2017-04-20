@@ -7,7 +7,9 @@
 
     MySQL queries
 
+    DROP DATABASE express;
     CREATE DATABASE express;
+    USE express;
 
     CREATE TABLE gene (
         ensembl_gene_id CHAR(25) NOT NULL,
@@ -24,14 +26,7 @@
         gene_name CHAR(25) NOT NULL,
         ensembl_gene_id CHAR(25) NOT NULL,
         PRIMARY KEY (gene_synonym),
-        FOREIGN KEY (ensembl_gene_id) REFERENCES GENE(ensembl_gene_id)
-    );
-
-    CREATE TABLE transcript (
-        ensembl_transcript_id CHAR(25) NOT NULL,
-        ensembl_gene_id CHAR(25) NOT NULL,
-        PRIMARY KEY (ensembl_transcript_id),
-        FOREIGN KEY (ensembl_gene_id) REFERENCES GENE(ensembl_gene_id)
+        FOREIGN KEY fk_gene (ensembl_gene_id) REFERENCES gene (ensembl_gene_id)
     );
 
     CREATE TABLE sample (
@@ -51,18 +46,28 @@
         chr_name CHAR(5) NOT NULL,
         start INT(11) NOT NULL,
         end INT(11) NOT NULL,
+        novelty INT(1) NOT NULL,
         tpm_raw DOUBLE PRECISION NOT NULL,
         tpm_normalized DOUBLE PRECISION NOT NULL,
         PRIMARY KEY (transcript_id, sample_id),
+        FOREIGN KEY fk_sample (sample_id) REFERENCES sample (sample_id),
         INDEX name (transcript_id, sample_id, chr_name, start, end)
     );
 
-    mysqlimport --ignore-lines=1 --fields-terminated-by='\t' --lines-terminated-by='\n' --local -v -u root -p express tables_revised/gene.tsv
-    mysqlimport --ignore-lines=1 --fields-terminated-by='\t' --lines-terminated-by='\n' --local -v -u root -p express tables_revised/synonym.tsv
-    mysqlimport --ignore-lines=1 --fields-terminated-by='\t' --lines-terminated-by='\n' --local -v -u root -p express tables_revised/transcript.tsv
-    mysqlimport --ignore-lines=1 --fields-terminated-by='\t' --lines-terminated-by='\n' --local -v -u root -p express tables_revised/sample.tsv
-    mysqlimport --ignore-lines=1 --fields-terminated-by='\t' --lines-terminated-by='\n' --local -v -u root -p express tables_revised/expression.tsv
+    CREATE TABLE transcript (
+        ensembl_transcript_id CHAR(25) NOT NULL,
+        ensembl_gene_id CHAR(25) NOT NULL,
+        FOREIGN KEY fk_transcript (ensembl_transcript_id) REFERENCES expression (transcript_id),
+        FOREIGN KEY fk_gene (ensembl_gene_id) REFERENCES gene (ensembl_gene_id)
+    );
 
+    mysqlimport --ignore-lines=1 --fields-terminated-by='\t' --lines-terminated-by='\n' --local -v -u root -p express express-tables/gene.tsv
+    mysqlimport --ignore-lines=1 --fields-terminated-by='\t' --lines-terminated-by='\n' --local -v -u root -p express express-tables/synonym.tsv
+    mysqlimport --ignore-lines=1 --fields-terminated-by='\t' --lines-terminated-by='\n' --local -v -u root -p express express-tables/transcript.tsv
+    mysqlimport --ignore-lines=1 --fields-terminated-by='\t' --lines-terminated-by='\n' --local -v -u root -p express express-tables/sample.tsv
+    mysqlimport --ignore-lines=1 --fields-terminated-by='\t' --lines-terminated-by='\n' --local -v -u root -p express express-tables/expression.tsv
+
+    mysqldump -u root -p express | gzip > express.sql.gz
     */
 
     // this PHP file has an array like following
@@ -130,8 +135,56 @@
         return $parsed;
     }
 
+    function get_location($parsed, $db) {
+        /*
+        if any of the following is given:
+            Ensembl gene ID
+            MGI gene ID
+            Ensembl transcript ID
+            Gene synonym
+        */
+        if ($parsed['type'] == 'ensembl_gene_id') {
+            $stmt = $db->prepare("SELECT
+                gene.chr_name,
+                gene.start,
+                gene.end
+                FROM gene
+                WHERE gene.ensembl_gene_id = :query");
+        } elseif ($parsed['type'] == 'mgi_gene_id') {
+            $stmt = $db->prepare("SELECT
+                gene.chr_name,
+                gene.start,
+                gene.end
+                FROM gene
+                WHERE gene.mgi_gene_id = :query");
+        } elseif ($parsed['type'] == 'ensembl_transcript_id') {
+            $stmt = $db->prepare("SELECT
+                gene.chr_name,
+                gene.start,
+                gene.end
+                FROM gene, transcript
+                WHERE gene.ensembl_gene_id = transcript.ensembl_gene_id
+                AND transcript.ensembl_transcript_id = :query
+                GROUP BY transcript.ensembl_transcript_id");
+        } else {
+            $stmt = $db->prepare("SELECT
+                gene.chr_name,
+                gene.start,
+                gene.end
+                FROM gene, synonym
+                WHERE gene.ensembl_gene_id = synonym.ensembl_gene_id
+                AND synonym.gene_synonym = :query");
+        }
+        $stmt->execute(array(
+            ':query' => strtoupper($parsed['query'])
+        ));
+        $location = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        return $location[0];
+    }
+
     function get_expression($parsed, $tissue_type, $cutoff, $db) {
         $transcript_ids = array();
+        $data = array();
         $results = array();
         // collect transcript IDs
         if ($parsed['is_location'] === true) {
@@ -202,29 +255,55 @@
             $params = $transcript_ids;
             array_unshift($params, $tissue_type);
             array_push($params, $cutoff);
-            // fetch for those transcript IDs TPMs
+            // fetch expression data for those transcript IDs TPMs
             $stmt = $db->prepare("SELECT
-                synonym.gene_name AS gene,
-                transcript.ensembl_transcript_id AS transcript,
+                expression.transcript_id AS transcript,
                 sample.dev_stage AS stage,
                 sample.bioproject_id AS bioproject_id,
                 sample.pubmed_id AS pubmed_id,
                 sample.reference AS reference,
+                expression.novelty AS novelty,
                 AVG(expression.tpm_raw) AS value_raw,
                 AVG(expression.tpm_normalized) AS value_normalized,
                 CONCAT(expression.chr_name, ':', expression.start, '-', expression.end) AS location
-                FROM transcript, gene, synonym, sample, expression
-                WHERE transcript.ensembl_transcript_id = expression.transcript_id
-                AND sample.sample_id = expression.sample_id
-                AND gene.ensembl_gene_id = transcript.ensembl_gene_id
-                AND gene.ensembl_gene_id = synonym.ensembl_gene_id
+                FROM sample, expression
+                WHERE expression.sample_id = sample.sample_id
                 AND sample.tissue_type = ?
-                AND transcript.ensembl_transcript_id IN ($in)
-                GROUP BY sample.dev_stage, transcript.ensembl_transcript_id
-                HAVING AVG(expression.tpm_normalized) > ?");
+                AND expression.transcript_id IN ($in)
+                AND expression.tpm_normalized >= ?
+                GROUP BY sample.dev_stage, expression.transcript_id");
             $stmt->execute($params);
             // fetch expression values
-            $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            // get the resulting Ensembl transcript IDs for obtaining gene names
+            $transcript_ids = array_map(function ($arr) {
+                return $arr['transcript'];
+            }, $data);
+            $in = join(',', array_pad(array(), count($transcript_ids), '?'));
+            // prepare an SQL for getting gene names
+            $stmt = $db->prepare("SELECT
+                transcript.ensembl_transcript_id AS transcript,
+                synonym.gene_name AS gene
+                FROM transcript, gene, synonym
+                WHERE gene.ensembl_gene_id = synonym.ensembl_gene_id
+                AND transcript.ensembl_gene_id = gene.ensembl_gene_id
+                AND transcript.ensembl_transcript_id IN ($in)
+                GROUP BY transcript.ensembl_transcript_id");
+            $stmt->execute($transcript_ids);
+            // fetch gene names
+            $gene_names = $stmt->fetchAll(PDO::FETCH_COLUMN|PDO::FETCH_GROUP);
+
+            // add gene names to data
+            foreach ($data as $d) {
+                if (!starts_with($d['transcript'], 'MSTRG')) {
+                    $d['gene'] = $gene_names[$d['transcript']][0];
+                } else {
+                    $d['gene'] = '';
+                }
+                $results[] = $d;
+            }
+
             // sort the results by developmental stage
             usort($results, function($a, $b) {
                 return strnatcmp($a['stage'], $b['stage']);
@@ -233,81 +312,39 @@
         return $results;
     }
 
-    function normalize_row($results) {
-        // find the maximum normalized values for each transcript or row
-        $max_vals = array();
+    function normalize_row($results, $value) {
+        $normalize_by = 'value_' . $value;
+        // collect values per row (transcript)
+        $row_vals = array();
         foreach ($results as $result) {
-            if (array_key_exists($result['transcript'], $max_vals)) {
-                if ($max_vals[$result['transcript']] < floatval($result['value_normalized'])) {
-                    $max_vals[$result['transcript']] = floatval($result['value_normalized']);
-                }
-            } else {
-                $max_vals[$result['transcript']] = floatval($result['value_normalized']);
+            if (!array_key_exists($result['transcript'], $row_vals)) {
+                $row_vals[$result['transcript']] = array();
             }
+            array_push($row_vals[$result['transcript']], floatval($result[$normalize_by]));
         }
+        // row-normalize and calculate average per row
         $data = array();
         foreach ($results as $result) {
+            $vals = $row_vals[$result['transcript']];
+            // get the max value
+            $max_val = max($vals);
             // normalize the value in value_normalized key
-            if ($max_vals[$result['transcript']] > 0) {
-                $result['value'] = floatval($result['value_normalized']) / $max_vals[$result['transcript']];
+            if ($max_val > 0) {
+                $result['value'] = floatval($result[$normalize_by]) / $max_val;
             } else {
-                $result['value'] = floatval($result['value_normalized']);
+                $result['value'] = floatval($result[$normalize_by]);
             }
+            // set the average
+            $result['value_averaged'] = array_sum($vals) / count($vals);
             $data[] = $result;
         }
         return $data;
     }
 
-    function get_location($parsed, $db) {
-        /*
-        if any of the following is given:
-            Ensembl gene ID
-            MGI gene ID
-            Ensembl transcript ID
-            Gene synonym
-        */
-        if ($parsed['type'] == 'ensembl_gene_id') {
-            $stmt = $db->prepare("SELECT
-                gene.chr_name,
-                gene.start,
-                gene.end
-                FROM gene
-                WHERE gene.ensembl_gene_id = :query");
-        } elseif ($parsed['type'] == 'mgi_gene_id') {
-            $stmt = $db->prepare("SELECT
-                gene.chr_name,
-                gene.start,
-                gene.end
-                FROM gene
-                WHERE gene.mgi_gene_id = :query");
-        } elseif ($parsed['type'] == 'ensembl_transcript_id') {
-            $stmt = $db->prepare("SELECT
-                gene.chr_name,
-                gene.start,
-                gene.end
-                FROM gene, transcript
-                WHERE gene.ensembl_gene_id = transcript.ensembl_gene_id
-                AND transcript.ensembl_transcript_id = :query
-                GROUP BY transcript.ensembl_transcript_id");
-        } else {
-            $stmt = $db->prepare("SELECT
-                gene.chr_name,
-                gene.start,
-                gene.end
-                FROM gene, synonym
-                WHERE gene.ensembl_gene_id = synonym.ensembl_gene_id
-                AND synonym.gene_synonym = :query");
-        }
-        $stmt->execute(array(
-            ':query' => strtoupper($parsed['query'])
-        ));
-        $location = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        return $location[0];
-    }
-
     $query = (isset($_GET['query']) === true) ? sanitize($_GET['query']) : '';
-    $cutoff = (isset($_GET['cutoff']) === true) ? floatval(sanitize($_GET['cutoff'])) : 1;
     $tissue = (isset($_GET['tissue']) === true) ? sanitize($_GET['tissue']) : '';
+    $cutoff = (isset($_GET['cutoff']) === true) ? floatval(sanitize($_GET['cutoff'])) : 1;
+    $value = (isset($_GET['value']) === true) ? sanitize($_GET['value']) : 'raw';
     $format = (isset($_GET['format']) === true) ? sanitize($_GET['format']) : 'json';
     if ($query !== '') {
 
@@ -340,7 +377,7 @@
             // query the database and obtain required fields
             $results = get_expression($parsed, $tissue, $cutoff, $db);
             // normalize results
-            $results = normalize_row($results);
+            $results = normalize_row($results, $value);
             if ($format == 'json') {
                 // return the JSON format of the data
                 header('Content-Type: application/json');
@@ -356,6 +393,7 @@
                         'bioproject_id',
                         'pubmed_id',
                         'reference',
+                        'novelty',
                         'raw_value',
                         'normalized_value'
                     ));
@@ -369,6 +407,7 @@
                             $result['bioproject_id'],
                             $result['pubmed_id'],
                             $result['reference'],
+                            $result['novelty'],
                             round($result['value_raw'], 2),
                             round($result['value_normalized'], 2)
                         ));

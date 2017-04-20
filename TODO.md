@@ -6,3 +6,4 @@
 * ~~Completing Docs & Contact pages~~
 * ~~Converting SQLite to MySQL database (on IU web servers)~~
 * ~~Migrating to the IU web servers~~
+* Heatmap rows ordered as known, completely novel and unannotated

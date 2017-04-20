@@ -131,7 +131,9 @@ function drawTable(data) {
     if (data !== null && data.length > 0) {
 
         // TODO: make this unique for stage and bioproject_id
-        var unique_data = data.filter(function(item, pos, array) {
+        var unique_data = data.sort(function(a, b) {
+          return a.stage.localeCompare(b.stage);
+        }).filter(function(item, pos, array) {
             return array.map(function(mapItem) {
                 return mapItem['stage'];
             }).indexOf(item['stage']) === pos;
@@ -171,14 +173,15 @@ function drawTable(data) {
     }
 }
 
-function drawHeatmap(tissue, cutoff, query) {
+function drawHeatmap(query, tissue, cutoff, value) {
     spinner.spin(target);
 
     var request = [
         baseUrl, 'app/api.php',
-        '?tissue=', tissue,
+        '?query=', query,
+        '&tissue=', tissue,
         '&cutoff=', cutoff,
-        '&query=', query
+        '&value=', value
     ].join('');
 
     console.log(request);
@@ -209,10 +212,29 @@ function drawHeatmap(tissue, cutoff, query) {
                 return sofar.indexOf(cur.stage) < 0 ? sofar.concat([cur.stage]) : sofar;
             }, []);
 
-            var transcripts = data.reduce(function(sofar, cur) {
-                // serialize gene name, transcript ID and location
-                cur = cur.gene + '__' + cur.transcript + '__' + cur.location;
-                return sofar.indexOf(cur) < 0 ? sofar.concat([cur]) : sofar;
+            var transcripts = data.sort(function (a, b) {
+                // sort by novelty & averaged value
+                // greater than cases
+                if ( (b.novelty === '0' && a.novelty === '1') ||
+                     (b.novelty === '0' && a.novelty === '2') ||
+                     (b.novelty === '2' && a.novelty === '1')
+                   )
+                  return 1;
+                // less than cases
+                if ( (b.novelty === '1' && a.novelty === '0') ||
+                     (b.novelty === '2' && a.novelty === '0') ||
+                     (b.novelty === '1' && a.novelty === '2')
+                   )
+                  return -1;
+                // equal case
+                if (b.novelty === a.novelty)
+                  return b.value_averaged - a.value_averaged;
+                // rest
+                return 0;
+              }).reduce(function(sofar, cur) {
+              // serialize gene name, transcript ID, location and novelty
+              cur = [cur.gene, cur.transcript, cur.location, cur.novelty].join('__');
+              return sofar.indexOf(cur) < 0 ? sofar.concat([cur]) : sofar;
             }, []);
 
             var margin = { top: 100, right: 0, bottom: 0, left: 200 };
@@ -235,6 +257,7 @@ function drawHeatmap(tissue, cutoff, query) {
             container.selectAll("*").remove();
 
             var svg = container.append("svg")
+                .attr("xmlns", "http://www.w3.org/2000/svg")
                 .attr("width", "100%")
                 .attr("height", "100%")
                 .attr("viewBox", "0 0 " + innerWidth + " " + innerHeight)
@@ -292,7 +315,12 @@ function drawHeatmap(tissue, cutoff, query) {
               .style("font-family", "sans-serif")
               .style("text-anchor", "end")
               .style("fill", function(d) {
-                return (d.split('__')[1].startsWith('ENS')) ? "#337ab7": "#101010";
+                var color = '#101010';
+                if (d.split('__')[1].startsWith('ENS'))
+                  color = '#337ab7';
+                if (d.split('__')[3] == '2')
+                  color = '#5cb85c';
+                return color;
               })
               .style("text-decoration", function(d) {
                 return (d.split('__')[1].startsWith('ENS')) ? "underline": "none";
@@ -350,7 +378,7 @@ function drawHeatmap(tissue, cutoff, query) {
               .style("fill", function(d) { return colorScale(d.value); });
 
             cards.append("text")
-              .text(function(d) { return d.value.toFixed(2); })
+              .text(function(d) { return d.value.toFixed(4); })
               .attr("x", function(d) { return xScale(d.stage) + (cardSize.width / 2) - 12; })
               .attr("y", function(d) { return yScale(d.transcript) + (cardSize.height / 2) + 5; })
               .style("font-family", "sans-serif")
@@ -420,6 +448,18 @@ function isBrowser() {
 }
 
 /*
+Gets the recently entered query from the form
+*/
+function getQuery() {
+    var query = $('input[name="query"]').val();
+    return query;
+}
+
+function setQuery(query) {
+    $('input[name="query"]').val(query);
+}
+
+/*
 Gets the recently selected tissue from the form
 */
 function getTissue() {
@@ -444,15 +484,15 @@ function setCutoff(cutoff) {
 }
 
 /*
-Gets the recently entered query from the form
+Gets the recently selected value type from the form
 */
-function getQuery() {
-    var query = $('input[name="query"]').val();
-    return query;
+function getValue() {
+    var value = $('select[name="value"]').val();
+    return value;
 }
 
-function setQuery(query) {
-    $('input[name="query"]').val(query);
+function setValue(value) {
+    $('select[name="value"]').val(value);
 }
 
 /*
@@ -530,26 +570,46 @@ function searchOnBrowser(query) {
     });
 }
 
-function search(tissue, cutoff, query) {
-    var parameters = [
-      '#tissue=', tissue,
-      '&cutoff=', cutoff,
-      '&query=', query
-    ].join('');
-    window.location.hash = parameters;
+function toggleSearch(toggle) {
+    $('input[name="query"]').attr('disabled', toggle);
+    $('select[name="tissue"]').attr('disabled', toggle);
+    $('select[name="cutoff"]').attr('disabled', toggle);
+    $('select[name="value"]').attr('disabled', toggle);
+    $('button[name="search"]').attr('disabled', toggle);
+}
 
-    if (tissue != '' && cutoff != '' && query != '') {
+function search(query, tissue, cutoff, value) {
+    // check if all search parameters are given
+    if (query != '' && tissue != '' && cutoff != '' && value != '') {
+
+        // disable form elements
+        toggleSearch(true);
+
+        var parameters = [
+          '#query=', query,
+          '&tissue=', tissue,
+          '&cutoff=', cutoff,
+          '&value=', value
+        ].join('');
+        window.location.hash = parameters;
+
         if (browser === null) {
+            // draw the browser from scratch
             drawBrowser(query);
         } else {
             // browser has been initiated, just search
             searchOnBrowser(query);
         }
         if (isHeatmap()) {
-            drawHeatmap(tissue, cutoff, query);
+            // draw/update the heatmap
+            drawHeatmap(query, tissue, cutoff, value);
         }
-    }
 
+        // enable back form elements
+        toggleSearch(false);
+    } else {
+      alertUser('Missing search parameters.')
+    }
     toggleSeparator();
 }
 
@@ -566,15 +626,17 @@ function saveData(data, type, name) {
 }
 
 function exportView(view, format) {
+  var query = getQuery();
   var tissue = getTissue();
   var cutoff = getCutoff();
-  var query = getQuery();
+  var value = getValue();
 
-  if (tissue.length > 0 && cutoff.length > 0 && query.length > 0) {
+  if (query.length > 0 && tissue.length > 0 && cutoff.length > 0 && value.length > 0) {
     var namePrefix = [
+      query.replace(':', '-'),
       tissue,
       cutoff,
-      query.replace(':', '-')
+      value
     ].join('_');
 
     if (view == 'heatmap') {
@@ -594,9 +656,10 @@ function exportView(view, format) {
 
           var request = [
             baseUrl, 'app/api.php',
-            '?tissue=', tissue,
+            '?query=', query,
             '&cutoff=', cutoff,
-            '&query=', query,
+            '&tissue=', tissue,
+            '&value=', value,
             '&format=', format
             ].join('');
 
@@ -644,9 +707,9 @@ function exportView(view, format) {
 }
 
 function toggleSeparator() {
+    var query = getQuery();
     var tissue = getTissue();
     var cutoff = getCutoff();
-    var query = getQuery();
     var $hrSeparatorBrowser = $('#hr-separator-browser');
     var $hrSeparatorHeatmap = $('#hr-separator-heatmap');
     var btnBrowserState = $('.btn-browser').data('state');
@@ -690,32 +753,69 @@ function toggleView($btn) {
 
 // event handlers
 $(document).ready(function() {
+    var query = getHashValue('query');
     var tissue = getHashValue('tissue');
     var cutoff = getHashValue('cutoff');
-    var query = getHashValue('query');
+    var value = getHashValue('value');
 
-    if (tissue !== null && cutoff !== null && query !== null) {
-      setTissue(tissue);
-      setCutoff(cutoff);
-      setQuery(query);
-      search(tissue, cutoff, query);
+    if (query !== null && tissue !== null && cutoff !== null && value !== null) {
+        setTissue(tissue);
+        setCutoff(cutoff);
+        setQuery(query);
+        setValue(value);
+        search(query, tissue, cutoff, value);
     }
 
+    $('select[name="tissue"]').on('change', function(e) {
+      var query = getQuery();
+      var tissue = getTissue();
+      var cutoff = getCutoff();
+      var value = getValue();
+      if (query.length > 0) {
+        search(query, tissue, cutoff, value);
+      }
+    });
+
+    $('select[name="cutoff"]').on('change', function(e) {
+      var query = getQuery();
+      var tissue = getTissue();
+      var cutoff = getCutoff();
+      var value = getValue();
+      if (query.length > 0) {
+        search(query, tissue, cutoff, value);
+      }
+    });
+
+    $('select[name="value"]').on('change', function(e) {
+      var query = getQuery();
+      var tissue = getTissue();
+      var cutoff = getCutoff();
+      var value = getValue();
+      if (query.length > 0) {
+        search(query, tissue, cutoff, value);
+      }
+    });
+
     $('button[name="search"]').on('click', function(e) {
-        e.preventDefault();
+      e.preventDefault();
+      var tissue = getTissue();
+      var cutoff = getCutoff();
+      var query = getQuery();
+      var value = getValue();
+      if (query.length > 0) {
+        search(query, tissue, cutoff, value);
+      }
+    });
+
+    $('input[name="query"]').on('keypress', function(e) {
+      if (e.which === 13) {
         var tissue = getTissue();
         var cutoff = getCutoff();
         var query = getQuery();
-        search(tissue, cutoff, query);
-    });
-
-    $('input[name="query"]').on('keypress', function (e) {
-        if (e.which === 13) {
-            var tissue = getTissue();
-            var cutoff = getCutoff();
-            var query = getQuery();
-            search(tissue, cutoff, query);
+        if (query.length > 0) {
+          search(query, tissue, cutoff, value);
         }
+      }
     });
 
     $('.btn-export').on('click', function(e) {
