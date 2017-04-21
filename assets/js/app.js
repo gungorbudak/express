@@ -812,6 +812,7 @@ $(document).ready(function() {
         var tissue = getTissue();
         var cutoff = getCutoff();
         var query = getQuery();
+        var value = getValue();
         if (query.length > 0) {
           search(query, tissue, cutoff, value);
         }
