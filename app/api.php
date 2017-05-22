@@ -280,34 +280,39 @@
             $transcript_ids = array_map(function ($arr) {
                 return $arr['transcript'];
             }, $data);
-            $in = join(',', array_pad(array(), count($transcript_ids), '?'));
-            // prepare an SQL for getting gene names
-            $stmt = $db->prepare("SELECT
-                transcript.ensembl_transcript_id AS transcript,
-                synonym.gene_name AS gene
-                FROM transcript, gene, synonym
-                WHERE gene.ensembl_gene_id = synonym.ensembl_gene_id
-                AND transcript.ensembl_gene_id = gene.ensembl_gene_id
-                AND transcript.ensembl_transcript_id IN ($in)
-                GROUP BY transcript.ensembl_transcript_id");
-            $stmt->execute($transcript_ids);
-            // fetch gene names
-            $gene_names = $stmt->fetchAll(PDO::FETCH_COLUMN|PDO::FETCH_GROUP);
 
-            // add gene names to data
-            foreach ($data as $d) {
-                if (!starts_with($d['transcript'], 'MSTRG')) {
-                    $d['gene'] = $gene_names[$d['transcript']][0];
-                } else {
-                    $d['gene'] = '';
+            $count = count($transcript_ids);
+            // do we have any expression data for given transcripts?
+            if ($count > 0) {
+                $in = join(',', array_pad(array(), $count, '?'));
+                // prepare an SQL for getting gene names
+                $stmt = $db->prepare("SELECT
+                    transcript.ensembl_transcript_id AS transcript,
+                    synonym.gene_name AS gene
+                    FROM transcript, gene, synonym
+                    WHERE gene.ensembl_gene_id = synonym.ensembl_gene_id
+                    AND transcript.ensembl_gene_id = gene.ensembl_gene_id
+                    AND transcript.ensembl_transcript_id IN ($in)
+                    GROUP BY transcript.ensembl_transcript_id");
+                $stmt->execute($transcript_ids);
+                // fetch gene names
+                $gene_names = $stmt->fetchAll(PDO::FETCH_COLUMN|PDO::FETCH_GROUP);
+
+                // add gene names to data
+                foreach ($data as $d) {
+                    if (!starts_with($d['transcript'], 'MSTRG')) {
+                        $d['gene'] = $gene_names[$d['transcript']][0];
+                    } else {
+                        $d['gene'] = '';
+                    }
+                    $results[] = $d;
                 }
-                $results[] = $d;
-            }
 
-            // sort the results by developmental stage
-            usort($results, function($a, $b) {
-                return strnatcmp($a['stage'], $b['stage']);
-            });
+                // sort the results by developmental stage
+                usort($results, function($a, $b) {
+                    return strnatcmp($a['stage'], $b['stage']);
+                });
+            }
         }
         return $results;
     }
@@ -343,7 +348,7 @@
 
     $query = (isset($_GET['query']) === true) ? sanitize($_GET['query']) : '';
     $tissue = (isset($_GET['tissue']) === true) ? sanitize($_GET['tissue']) : '';
-    $cutoff = (isset($_GET['cutoff']) === true) ? floatval(sanitize($_GET['cutoff'])) : 1;
+    $cutoff = (isset($_GET['cutoff']) === true) ? floatval(sanitize($_GET['cutoff'])) : 5;
     $value = (isset($_GET['value']) === true) ? sanitize($_GET['value']) : 'raw';
     $format = (isset($_GET['format']) === true) ? sanitize($_GET['format']) : 'json';
     if ($query !== '') {

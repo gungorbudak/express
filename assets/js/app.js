@@ -279,7 +279,7 @@ function drawHeatmap(query, tissue, cutoff, value) {
                   .attr("y", 0)
                   .attr("transform", "translate(" + cardSize.width / 2 + ", -16)")
                   .style("font-family", "sans-serif")
-                  .style("font-size", "28px")
+                  .style("font-size", "22px")
                   .style("text-anchor", "middle")
                   .style("fill", "#101010");
 
@@ -379,7 +379,7 @@ function drawHeatmap(query, tissue, cutoff, value) {
 
             cards.append("text")
               .text(function(d) { return d.value.toFixed(4); })
-              .attr("x", function(d) { return xScale(d.stage) + (cardSize.width / 2) - 12; })
+              .attr("x", function(d) { return xScale(d.stage) + (cardSize.width / 2) - 20; })
               .attr("y", function(d) { return yScale(d.transcript) + (cardSize.height / 2) + 5; })
               .style("font-family", "sans-serif")
               .style("fill", function(d) { return (d.value >= 0.44) ? "#FFFFFF": "#000000"; });
