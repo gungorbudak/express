@@ -40,6 +40,7 @@
                 <ul class="nav navbar-nav">
                     <li class="active"><a href="index.html" title="Go to home page"><i class="fa fa-home"></i> Home</a></li>
                     <li><a href="docs.html" title="Go to documentation page"><i class="fa fa-book"></i> Docs</a></li>
+                    <li><a href="user-guide.html" title="Go to user guide page"><i class="fa fa-file-text-o"></i> User Guide</a></li>
                     <li><a href="contact.html" title="Go to contact page"><i class="fa fa-envelope"></i> Contact</a></li>
                 </ul>
                 <ul class="nav navbar-nav navbar-right">
@@ -62,28 +63,42 @@
     <!-- page content -->
     <div class="container">
         <div class="row">
-            <div class="col-sm-2">
-                <label>Tissue type</label>
-                <select name="tissue" class="form-control input-lg">
-                    <option value="lens" selected="selected">Lens</option>
-                    <option value="retina">Retina</option>
-                </select>
-            </div>
-            <div class="col-sm-2">
-                <label>TPM cutoff</label>
-                <select name="cutoff" class="form-control input-lg">
-                    <option value="0">0</option>
-                    <option value="1">1</option>
-                    <option value="2">2</option>
-                    <option value="5" selected="selected">5</option>
-                </select>
-            </div>
-            <div class="col-sm-2">
-                <label>Values</label>
-                <select name="value" class="form-control input-lg">
-                    <option value="normalized">Normalized</option>
-                    <option value="raw" selected="selected">Raw</option>
-                </select>
+            <div class="col-sm-6">
+                <div class="row" style="margin-bottom: 5px;">
+                    <div class="col-sm-6">
+                        <label>Tissue type</label>
+                        <select name="tissue" class="form-control input-sm">
+                            <option value="lens" selected="selected">Lens</option>
+                            <option value="lens_subtype">Lens cell subtype</option>
+                            <option value="retina">Retina</option>
+                        </select>
+                    </div>
+                    <div class="col-sm-6">
+                        <label>Expression level</label>
+                        <select name="expression" class="form-control input-sm">
+                            <option value="gene" selected="selected">Gene</option>
+                            <option value="transcript">Transcript</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="row" style="margin-bottom: 5px;">
+                    <div class="col-sm-6">
+                        <label>TPM cutoff</label>
+                        <select name="cutoff" class="form-control input-sm">
+                            <option value="0">0</option>
+                            <option value="1">1</option>
+                            <option value="2">2</option>
+                            <option value="5" selected="selected">5</option>
+                        </select>
+                    </div>
+                    <div class="col-sm-6">
+                        <label>Values</label>
+                        <select name="value" class="form-control input-sm">
+                            <option value="normalized">Normalized (transcript only)</option>
+                            <option value="raw" selected="selected">Raw</option>
+                        </select>
+                    </div>
+                </div>
             </div>
             <div class="col-sm-6">
                 <label>Gene / transcript / location</label>
@@ -95,7 +110,7 @@
                         </button>
                     </span>
                 </div>
-                <p class="help-block">Sample queries: Cryb2, MGI:95564, ENSMUST00000088546, 5:113058250-113072250</p>
+                <p class="help-block">Sample queries: Crybb2, MGI:95564, ENSMUST00000088546, 5:113058250-113072250</p>
             </div>
         </div>
         <hr>

@@ -1,7 +1,8 @@
 'use strict';
 
 // base URL to the root with trailing slash
-var baseUrl = 'http://www.iupui.edu/~sysbio/express/';
+var BASE_URL = 'http://www.iupui.edu/~sysbio/express/';
+var API = 'app/api.php'
 // a global variable for the browser since
 // it will be generated only once
 var browser = null;
@@ -37,7 +38,7 @@ function getLocation(query, callback) {
     } else {
         // make a request to get location using identifier
         var request = [
-            baseUrl, 'app/api.php',
+            BASE_URL, API,
             '?query=', query, '&format=location'
         ].join('');
 
@@ -60,18 +61,27 @@ function drawBrowser(query) {
 
     var sources = [{
         name: 'Genome',
-        twoBitURI: baseUrl + 'resources/mm10.2bit',
+        twoBitURI: BASE_URL + 'resources/mm10.2bit',
         desc: 'Mouse reference genome build GRCm38',
         tier_type: 'sequence',
         provides_entrypoints: true,
         pinned: true,
     }, {
+        name: 'Genes',
+        desc: 'Mouse gene structures GENCODE version M7 (GRCm38.p4)',
+        bwgURI: 'http://ngs.sanger.ac.uk/production/gencode/trackhub/data/gencode.vM7.annotation.bb',
+        stylesheet_uri: 'http://www.biodalliance.org/stylesheets/gencode.xml',
+        collapseSuperGroups: true,
+        trixURI: 'http://ngs.sanger.ac.uk/production/gencode/trackhub/data/gencode.vM7.annotation.ix',
+        noSourceFeatureInfo: true,
+        provides_search: true
+    }, {
         name: 'Transcripts',
         desc: 'Mouse transcript structures modified GENCODE version M7 (GRCm38.p4) with additional novel transcripts',
-        bwgURI: baseUrl + 'resources/gencode.vM7.annotation.custom.bb',
-        stylesheet_uri: baseUrl + 'resources/gencode.xml',
+        bwgURI: BASE_URL + 'resources/gencode.vM7.annotation.custom.bb',
+        stylesheet_uri: BASE_URL + 'resources/gencode.xml',
         collapseSuperGroups: false,
-        trixURI: baseUrl + 'resources/gencode.vM7.annotation.ix',
+        trixURI: BASE_URL + 'resources/gencode.vM7.annotation.ix',
         noSourceFeatureInfo: true,
         provides_search: true
     }];
@@ -100,7 +110,7 @@ function drawBrowser(query) {
                 // additional options for customizing the browser
                 pageName: 'div-browser',
                 uiPrefix: '//www.biodalliance.org/release-0.13/',
-                maxHeight: 300,
+                maxHeight: 400,
                 fullScreen: false,
                 setDocumentTitle: false,
                 disablePoweredBy: true,
@@ -173,12 +183,13 @@ function drawTable(data) {
     }
 }
 
-function drawHeatmap(query, tissue, cutoff, value) {
+function drawHeatmap(expression, query, tissue, cutoff, value) {
     spinner.spin(target);
 
     var request = [
-        baseUrl, 'app/api.php',
-        '?query=', query,
+        BASE_URL, API,
+        '?expression=', expression,
+        '&query=', query,
         '&tissue=', tissue,
         '&cutoff=', cutoff,
         '&value=', value
@@ -197,14 +208,11 @@ function drawHeatmap(query, tissue, cutoff, value) {
             var transcriptNum = {};
             var transcriptCounter = 0;
 
+            // collect stage vs order
             data.forEach(function(d) {
                 if (!stageNum.hasOwnProperty(d.stage)) {
                     stageCounter++;
                     stageNum[d.stage] = stageCounter;
-                }
-                if (!transcriptNum.hasOwnProperty(d.transcript)) {
-                    transcriptCounter++;
-                    transcriptNum[d.transcript] = transcriptCounter;
                 }
             });
 
@@ -232,14 +240,20 @@ function drawHeatmap(query, tissue, cutoff, value) {
                 // rest
                 return 0;
               }).reduce(function(sofar, cur) {
+
+              // collect transcript ID vs order
+              if (!transcriptNum.hasOwnProperty(cur[expression])) {
+                  transcriptCounter++;
+                  transcriptNum[cur[expression]] = transcriptCounter;
+              }
               // serialize gene name, transcript ID, location and novelty
-              cur = [cur.gene, cur.transcript, cur.location, cur.novelty].join('__');
+              cur = [cur.gene_name, cur[expression], cur.location, cur.novelty].join('__');
               return sofar.indexOf(cur) < 0 ? sofar.concat([cur]) : sofar;
             }, []);
 
             var margin = { top: 100, right: 0, bottom: 0, left: 200 };
             var width = 1200 - margin.left - margin.right;
-            var height = (60 * (transcripts.length + 1)) - margin.top - margin.bottom;
+            var height = (70 * (transcripts.length + 1)) - margin.top - margin.bottom;
             var colors = ["#f7fbff","#deebf7","#c6dbef","#9ecae1",
               "#6baed6","#4292c6","#2171b5","#08519c","#08306b"];
 
@@ -360,7 +374,7 @@ function drawHeatmap(query, tissue, cutoff, value) {
 
             var cards = heatmap.selectAll(".card")
               .data(data, function(d) {
-                return transcriptNum[d.transcript] + ':' + stageNum[d.stage];
+                return transcriptNum[d[expression]] + ':' + stageNum[d.stage];
               });
 
             cards.enter().append("g")
@@ -368,7 +382,7 @@ function drawHeatmap(query, tissue, cutoff, value) {
 
             cards.append("rect")
               .attr("x", function(d) { return xScale(d.stage); })
-              .attr("y", function(d) { return yScale(d.transcript); })
+              .attr("y", function(d) { return yScale(d[expression]); })
               .attr("rx", 4)
               .attr("ry", 4)
               .attr("width", cardSize.width)
@@ -380,7 +394,7 @@ function drawHeatmap(query, tissue, cutoff, value) {
             cards.append("text")
               .text(function(d) { return d.value.toFixed(4); })
               .attr("x", function(d) { return xScale(d.stage) + (cardSize.width / 2) - 20; })
-              .attr("y", function(d) { return yScale(d.transcript) + (cardSize.height / 2) + 5; })
+              .attr("y", function(d) { return yScale(d[expression]) + (cardSize.height / 2) + 5; })
               .style("font-family", "sans-serif")
               .style("fill", function(d) { return (d.value >= 0.44) ? "#FFFFFF": "#000000"; });
 
@@ -445,6 +459,18 @@ Checks if the browser button in the menu is active
 */
 function isBrowser() {
     return $('.btn-browser').data('state');
+}
+
+/*
+Gets the recently entered expression from the form
+*/
+function getExpression() {
+    var tissue = $('select[name="expression"]').val();
+    return tissue;
+}
+
+function setExpression(expression) {
+    $('select[name="expression"]').val(expression);
 }
 
 /*
@@ -571,6 +597,7 @@ function searchOnBrowser(query) {
 }
 
 function toggleSearch(toggle) {
+    $('select[name="expression"]').attr('disabled', toggle);
     $('input[name="query"]').attr('disabled', toggle);
     $('select[name="tissue"]').attr('disabled', toggle);
     $('select[name="cutoff"]').attr('disabled', toggle);
@@ -578,15 +605,17 @@ function toggleSearch(toggle) {
     $('button[name="search"]').attr('disabled', toggle);
 }
 
-function search(query, tissue, cutoff, value) {
+function search(expression, query, tissue, cutoff, value) {
     // check if all search parameters are given
-    if (query != '' && tissue != '' && cutoff != '' && value != '') {
+    if (expression != '' && query != '' && tissue != ''
+        && cutoff != '' && value != '') {
 
         // disable form elements
         toggleSearch(true);
 
         var parameters = [
-          '#query=', query,
+          '#expression=', expression,
+          '&query=', query,
           '&tissue=', tissue,
           '&cutoff=', cutoff,
           '&value=', value
@@ -602,7 +631,7 @@ function search(query, tissue, cutoff, value) {
         }
         if (isHeatmap()) {
             // draw/update the heatmap
-            drawHeatmap(query, tissue, cutoff, value);
+            drawHeatmap(expression, query, tissue, cutoff, value);
         }
 
         // enable back form elements
@@ -626,13 +655,15 @@ function saveData(data, type, name) {
 }
 
 function exportView(view, format) {
+  var expression = getExpression();
   var query = getQuery();
   var tissue = getTissue();
   var cutoff = getCutoff();
   var value = getValue();
 
-  if (query.length > 0 && tissue.length > 0 && cutoff.length > 0 && value.length > 0) {
+  if (expression.length > 0 && query.length > 0 && tissue.length > 0 && cutoff.length > 0 && value.length > 0) {
     var namePrefix = [
+      expression,
       query.replace(':', '-'),
       tissue,
       cutoff,
@@ -655,8 +686,9 @@ function exportView(view, format) {
         } else if (format == 'tsv') {
 
           var request = [
-            baseUrl, 'app/api.php',
-            '?query=', query,
+            BASE_URL, API,
+            '?expression=', expression,
+            '&query=', query,
             '&cutoff=', cutoff,
             '&tissue=', tissue,
             '&value=', value,
@@ -751,83 +783,80 @@ function toggleView($btn) {
     return;
 }
 
+function setAndSearch() {
+  var expression = getHashValue('expression');
+  var query = getHashValue('query');
+  var tissue = getHashValue('tissue');
+  var cutoff = getHashValue('cutoff');
+  var value = getHashValue('value');
+
+  if (expression !== null && query !== null
+      && tissue !== null && cutoff !== null
+      && value !== null) {
+    setExpression(expression);
+    setQuery(query);
+    setTissue(tissue);
+    setCutoff(cutoff);
+    setValue(value);
+    search(expression, query, tissue, cutoff, value);
+  }
+}
+
+function getAndSearch() {
+  var expression = getExpression();
+  var query = getQuery();
+  var tissue = getTissue();
+  var cutoff = getCutoff();
+  var value = getValue();
+  if (query.length > 0) {
+    search(expression, query, tissue, cutoff, value);
+  }
+}
+
 // event handlers
 $(document).ready(function() {
-    var query = getHashValue('query');
-    var tissue = getHashValue('tissue');
-    var cutoff = getHashValue('cutoff');
-    var value = getHashValue('value');
+  // check if parameters given
+  // set parameters in the form
+  // and make the search
+  setAndSearch();
 
-    if (query !== null && tissue !== null && cutoff !== null && value !== null) {
-        setTissue(tissue);
-        setCutoff(cutoff);
-        setQuery(query);
-        setValue(value);
-        search(query, tissue, cutoff, value);
+  // handle other search options below
+  $('select[name="expression"]').on('change', function(e) {
+    getAndSearch();
+  });
+
+  $('select[name="tissue"]').on('change', function(e) {
+    getAndSearch();
+  });
+
+  $('select[name="cutoff"]').on('change', function(e) {
+    getAndSearch();
+  });
+
+  $('select[name="value"]').on('change', function(e) {
+    getAndSearch();
+  });
+
+  $('button[name="search"]').on('click', function(e) {
+    e.preventDefault();
+    getAndSearch();
+  });
+
+  $('input[name="query"]').on('keypress', function(e) {
+    if (e.which === 13) {
+      getAndSearch();
     }
+  });
 
-    $('select[name="tissue"]').on('change', function(e) {
-      var query = getQuery();
-      var tissue = getTissue();
-      var cutoff = getCutoff();
-      var value = getValue();
-      if (query.length > 0) {
-        search(query, tissue, cutoff, value);
-      }
-    });
+  $('.btn-export').on('click', function(e) {
+    e.preventDefault();
+    var view = $(this).data('view');
+    var format = $(this).data('format');
+    exportView(view, format);
+  });
 
-    $('select[name="cutoff"]').on('change', function(e) {
-      var query = getQuery();
-      var tissue = getTissue();
-      var cutoff = getCutoff();
-      var value = getValue();
-      if (query.length > 0) {
-        search(query, tissue, cutoff, value);
-      }
-    });
-
-    $('select[name="value"]').on('change', function(e) {
-      var query = getQuery();
-      var tissue = getTissue();
-      var cutoff = getCutoff();
-      var value = getValue();
-      if (query.length > 0) {
-        search(query, tissue, cutoff, value);
-      }
-    });
-
-    $('button[name="search"]').on('click', function(e) {
-      e.preventDefault();
-      var tissue = getTissue();
-      var cutoff = getCutoff();
-      var query = getQuery();
-      var value = getValue();
-      if (query.length > 0) {
-        search(query, tissue, cutoff, value);
-      }
-    });
-
-    $('input[name="query"]').on('keypress', function(e) {
-      if (e.which === 13) {
-        var tissue = getTissue();
-        var cutoff = getCutoff();
-        var query = getQuery();
-        var value = getValue();
-        if (query.length > 0) {
-          search(query, tissue, cutoff, value);
-        }
-      }
-    });
-
-    $('.btn-export').on('click', function(e) {
-        e.preventDefault();
-        var view = $(this).data('view');
-        var format = $(this).data('format');
-        exportView(view, format);
-    });
-
-    $('.btn-heatmap, .btn-browser').on('click', function(e) {
-        e.preventDefault();
-        toggleView($(this));
-    });
+  $('.btn-heatmap, .btn-browser').on('click', function(e) {
+    e.preventDefault();
+    toggleView($(this));
+  });
 });
