@@ -4,7 +4,7 @@ A database of transcriptome profiles encompassing known and novel transcripts ac
 
 ## Production server
 
-Express is running on http://www.iupui.edu/~sysbio/express/.
+Express is running on https://sysbio.sitehost.iu.edu/express/.
 
 ## Local server
 
@@ -19,7 +19,7 @@ After setting up an environment including Apache and MySQL servers, you will nee
 
 2. Change the base URL at 4th line of `assets/js/app.js` into localhost
 
-        perl -pi -e "s/www\.iupui\.edu\/\~sysbio/localhost/g" path/to/www/express/assets/js/app.js
+        perl -pi -e "s/sysbio\.sitehost\.iu\.edu\//localhost/g" path/to/www/express/assets/js/app.js
 
 3. A directory called `resources` under root directory
 
@@ -29,7 +29,7 @@ After setting up an environment including Apache and MySQL servers, you will nee
 4. Custom GENCODE vM7 annotation and XML files under resources directory
 
         cd /path/to/www/express/resources
-        wget http://www.iupui.edu/~sysbio/express/resources/gencode.vM7.tgz
+        wget https://sysbio.sitehost.iu.edu/express/resources/gencode.vM7.tgz
         tar -zxfv gencode.vM7.tgz
         rm gencode.vM7.tgz
 
@@ -41,7 +41,7 @@ After setting up an environment including Apache and MySQL servers, you will nee
 6. The MySQL dump of Express database
 
         cd /path/to/www/express/resources
-        wget http://www.iupui.edu/~sysbio/express/resources/express.sql.gz
+        wget https://sysbio.sitehost.iu.edu/express/resources/express.sql.gz
         gunzip < express.sql.gz | mysql -u user -p express
         rm express.sql.gz
 

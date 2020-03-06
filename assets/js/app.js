@@ -1,7 +1,7 @@
 'use strict';
 
 // base URL to the root with trailing slash
-var BASE_URL = 'http://www.iupui.edu/~sysbio/express/';
+var BASE_URL = 'https://sysbio.sitehost.iu.edu/express/';
 var API = 'app/api.php'
 // a global variable for the browser since
 // it will be generated only once
@@ -69,19 +69,19 @@ function drawBrowser(query) {
     }, {
         name: 'Genes',
         desc: 'Mouse gene structures GENCODE version M7 (GRCm38.p4)',
-        bwgURI: 'http://ngs.sanger.ac.uk/production/gencode/trackhub/data/gencode.vM7.annotation.bb',
-        stylesheet_uri: 'http://www.biodalliance.org/stylesheets/gencode.xml',
+        bwgURI: BASE_URL + 'resources/gencode.vM7.annotation.bb',
+        stylesheet_uri: BASE_URL + 'resources/gencode.xml',
         collapseSuperGroups: true,
-        trixURI: 'http://ngs.sanger.ac.uk/production/gencode/trackhub/data/gencode.vM7.annotation.ix',
+        trixURI: BASE_URL + 'resources/gencode.vM7.annotation.ix',
         noSourceFeatureInfo: true,
         provides_search: true
     }, {
         name: 'Transcripts',
         desc: 'Mouse transcript structures modified GENCODE version M7 (GRCm38.p4) with additional novel transcripts',
-        bwgURI: BASE_URL + 'resources/gencode.vM7.annotation.custom.bb',
+        bwgURI: BASE_URL + 'resources/gencode.vM7.annotation.transcripts.bb',
         stylesheet_uri: BASE_URL + 'resources/gencode.xml',
         collapseSuperGroups: false,
-        trixURI: BASE_URL + 'resources/gencode.vM7.annotation.ix',
+        trixURI: BASE_URL + 'resources/gencode.vM7.annotation.transcripts.ix',
         noSourceFeatureInfo: true,
         provides_search: true
     }];
@@ -345,7 +345,7 @@ function drawHeatmap(expression, query, tissue, cutoff, value) {
               .on("click", function(d) {
                 var id = d.split('__')[1];
                 if (id.startsWith('ENS')) {
-                  return window.open("http://www.ensembl.org/id/" + id);
+                  return window.open("https://www.ensembl.org/id/" + id);
                 } else {
                   return false;
                 }

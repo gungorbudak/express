@@ -8,6 +8,7 @@
     <meta name="description" content="A database of transcriptome profiles encompassing known and novel transcripts across multiple developmental stages in eye tissues in mouse">
     <meta name="author" content="Gungor Budak">
     <title>Documentation &ndash; Express</title>
+    <link rel="shortcut icon" href="assets/img/favicon.png" type="image/png">
     <link rel="stylesheet" href="assets/css/libs/bootstrap.min.css" charset="utf-8">
     <link rel="stylesheet" href="assets/css/libs/bootstrap-theme.min.css" charset="utf-8">
     <link rel="stylesheet" href="assets/css/libs/font-awesome.min.css" charset="utf-8">
@@ -81,7 +82,7 @@
           <a name="download"></a>
           <h3>Download</h3>
           <p>
-            The dump of MySQL database can be downloaded using <a href="http://www.iupui.edu/~sysbio/express/resources/express.sql.gz" target="_blank">this link (express.sql.gz, compressed 242 MB)</a>. The complete guide to set up a local server of Express is given on <a href="https://github.com/gungorbudak/express" target="_blank">its GitHub page</a> including the source code.
+            The dump of MySQL database can be downloaded using <a href="https://sysbio.sitehost.iu.edu/express/resources/express.sql.gz" target="_blank">this link (express.sql.gz, compressed 242 MB)</a>. The complete guide to set up a local server of Express is given on <a href="https://github.com/gungorbudak/express" target="_blank">its GitHub page</a> including the source code.
           </p>
 
           <a name="usage"></a>
@@ -96,7 +97,7 @@
           <a name="api"></a>
           <h3>API</h3>
           <p>
-            The backend PHP API allows us to query the MySQL database for expression levels of transcripts given a tissue type, a TPM cutoff and a query (e.g. gene synonym/name, Ensembl gene ID, MGI gene ID, Ensembl transcript ID or chromosomal location). The API URL as follows: <code>http://www.iupui.edu/~sysbio/express/app/api.php</code> and accepts three GET parameters, <code>expression</code>, <code>query</code>, <code>tissue</code>, <code>cutoff</code> and <code>value</code> (e.g. <a href="http://www.iupui.edu/~sysbio/express/app/api.php?expression=transcript&query=Cryb2&tissue=lens&cutoff=1&value=raw" target="_blank">http://www.iupui.edu/~sysbio/express/app/api.php?expression=transcript&query=Cryb2&tissue=lens&cutoff=1&value=raw</a>).
+            The backend PHP API allows us to query the MySQL database for expression levels of transcripts given a tissue type, a TPM cutoff and a query (e.g. gene synonym/name, Ensembl gene ID, MGI gene ID, Ensembl transcript ID or chromosomal location). The API URL as follows: <code>https://sysbio.sitehost.iu.edu/express/app/api.php</code> and accepts three GET parameters, <code>expression</code>, <code>query</code>, <code>tissue</code>, <code>cutoff</code> and <code>value</code> (e.g. <a href="https://sysbio.sitehost.iu.edu/express/app/api.php?expression=transcript&query=Cryb2&tissue=lens&cutoff=1&value=raw" target="_blank">https://sysbio.sitehost.iu.edu/express/app/api.php?expression=transcript&query=Cryb2&tissue=lens&cutoff=1&value=raw</a>).
           </p>
           <a name="input"></a>
           <h4>Input</h4>
@@ -180,6 +181,16 @@
         </div>
       </div>
     </div><!-- /page content -->
+
+    <div class="container">
+      <div class="panel panel-success">
+          <div class="panel-heading"><h3 class="panel-title">Publication</h3></div>
+          <div class="panel-body">
+              <p>Please cite Express in your publications as:</p>
+              <p>Budak, G., Dash, S., Srivastava, R., Lachke, S. A., & Janga, S. C. (2018). <a href="https://www.sciencedirect.com/science/article/pii/S0014483516305607" target="_blank">Express: a database of transcriptome profiles encompassing known and novel transcripts across multiple development stages in eye tissues</a>. <i>Experimental eye research</i>, 168, 57-68.</p>
+          </div>
+      </div>
+    </div>
 
     <div class="footer">
         <div class="container">
